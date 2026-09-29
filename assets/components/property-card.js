@@ -1,9 +1,9 @@
 // assets/components/property-card.js
-import { CONFIG } from '../../client/data/config.js';
+import { CONFIG } from '/client/data/config.js';
 import {
   propertyUrl, formatPropertyPrice, formatLocation,
   formatSurface, icon, resizeImage, escapeHTML
-} from '../../client/includes/helpers.js';
+} from '/client/includes/helpers.js';
 
 const STATUS_LABELS = {
   'Disponible': null,

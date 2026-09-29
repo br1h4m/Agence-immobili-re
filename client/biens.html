@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <base href="/client/">
   <title>Nos biens — Immolode</title>
 </head>
 <body>
@@ -18,8 +17,7 @@
 
     <section class="section">
       <div class="container">
-        <div style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:40px;align-items:start"
-             id="biens-layout">
+        <div id="biens-layout" style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:40px;align-items:start">
           <div id="filters-slot"></div>
 
           <div>
@@ -55,9 +53,9 @@
   <div id="footer-slot"></div>
 
   <script type="module">
-    import { initPage } from './includes/scripts.js';
-    import { PropertyFilters } from '../assets/components/property-filters.js';
-    import { initBiensPage, getFilterOptions } from '../assets/js/filters.js';
+    import { initPage } from '/client/includes/scripts.js';
+    import { PropertyFilters } from '/assets/components/property-filters.js';
+    import { initBiensPage, getFilterOptions } from '/assets/js/filters.js';
 
     await initPage({ page: 'biens', title: 'Nos biens' });
 
@@ -66,25 +64,23 @@
 
     initBiensPage();
 
-    // Repositionne la sidebar en mobile (filtres en modal)
     const adjustLayout = () => {
       const layout = document.getElementById('biens-layout');
       if (!layout) return;
-      if (window.innerWidth <= 640) {
-        layout.style.gridTemplateColumns = '1fr';
-      } else {
-        layout.style.gridTemplateColumns = '280px minmax(0,1fr)';
-      }
+      layout.style.gridTemplateColumns = window.innerWidth <= 640
+        ? '1fr'
+        : '280px minmax(0,1fr)';
     };
     adjustLayout();
     window.addEventListener('resize', adjustLayout);
 
-    // Empêche le scroll en arrière-plan quand les filtres sont ouverts
     const observer = new MutationObserver(() => {
       const isOpen = document.querySelector('[data-filters]')?.classList.contains('is-open');
       document.documentElement.classList.toggle('no-scroll', Boolean(isOpen));
     });
-    observer.observe(document.querySelector('[data-filters]') || document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    observer.observe(document.querySelector('[data-filters]') || document.body, {
+      attributes: true, subtree: true, attributeFilter: ['class']
+    });
   </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 // assets/components/cta-section.js
-import { url, icon } from '../../client/includes/helpers.js';
+import { url, icon } from '/client/includes/helpers.js';
 
 export function CTASection({
   title = 'Vous avez un projet immobilier ?',

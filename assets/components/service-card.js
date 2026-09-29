@@ -1,5 +1,5 @@
 // assets/components/service-card.js
-import { url, icon, escapeHTML, resizeImage } from '../../client/includes/helpers.js';
+import { url, icon, escapeHTML, resizeImage } from '/client/includes/helpers.js';
 
 export function ServiceCard(service) {
   return `

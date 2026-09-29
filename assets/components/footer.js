@@ -1,6 +1,6 @@
 // assets/components/footer.js
-import { CONFIG } from '../../client/data/config.js';
-import { url, icon, whatsappLink } from '../../client/includes/helpers.js';
+import { CONFIG } from '/client/data/config.js';
+import { url, icon, whatsappLink } from '/client/includes/helpers.js';
 
 export function Footer() {
   const year = new Date().getFullYear();

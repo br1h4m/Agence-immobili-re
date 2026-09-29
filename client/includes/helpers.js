@@ -2,7 +2,7 @@
 // MODULE ES NAVIGATEUR — fonctions utilitaires pures, partagées par les composants et les pages.
 // (import / export uniquement : pas de Node.js)
 
-import { CONFIG } from '../data/config.js';
+import { CONFIG } from '/client/data/config.js';
 
 /* ==========================================================================
    URLs & liens

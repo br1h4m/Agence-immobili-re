@@ -8,8 +8,8 @@
 // Note SEO : les métadonnées sont rendues côté navigateur. Un futur backend / SSR pourra
 // les générer côté serveur sans changer l'API de ce module.
 
-import { CONFIG } from '../data/config.js';
-import { asset } from './helpers.js';
+import { CONFIG } from '/client/data/config.js';
+import { asset } from '/client/includes/helpers.js';
 
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap';

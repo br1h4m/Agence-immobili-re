@@ -1,5 +1,5 @@
 // assets/components/contact-form.js
-import { icon } from '../../client/includes/helpers.js';
+import { icon } from '/client/includes/helpers.js';
 
 let formId = 0;
 

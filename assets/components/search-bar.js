@@ -1,6 +1,6 @@
 // assets/components/search-bar.js
-import { CONFIG } from '../../client/data/config.js';
-import { url, icon } from '../../client/includes/helpers.js';
+import { CONFIG } from '/client/data/config.js';
+import { url, icon } from '/client/includes/helpers.js';
 
 const TYPES = ['Appartement', 'Villa', 'Maison', 'Terrain', 'Local', 'Bureau'];
 

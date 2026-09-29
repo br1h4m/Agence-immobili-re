@@ -1,5 +1,5 @@
 // assets/components/property-gallery.js
-import { icon, resizeImage, escapeHTML } from '../../client/includes/helpers.js';
+import { icon, resizeImage, escapeHTML } from '/client/includes/helpers.js';
 
 export function PropertyGallery(images = [], { title = '' } = {}) {
   if (!images.length) {

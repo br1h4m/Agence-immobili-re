@@ -1,6 +1,6 @@
 // assets/components/hero.js
-import { url, icon } from '../../client/includes/helpers.js';
-import { SearchBar } from './search-bar.js';
+import { url, icon } from '/client/includes/helpers.js';
+import { SearchBar } from '/assets/components/search-bar.js';
 
 export function Hero({
   title = 'Votre prochain bien commence ici',

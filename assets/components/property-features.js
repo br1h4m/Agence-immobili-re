@@ -1,5 +1,5 @@
 // assets/components/property-features.js
-import { featureIcon, escapeHTML } from '../../client/includes/helpers.js';
+import { featureIcon, escapeHTML } from '/client/includes/helpers.js';
 
 export function PropertyFeatures(features = []) {
   if (!features.length) return '';

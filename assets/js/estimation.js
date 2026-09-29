@@ -1,5 +1,5 @@
 // assets/js/estimation.js
-import { qs, qsa } from '../../client/includes/helpers.js';
+import { qs, qsa } from '/client/includes/helpers.js';
 
 export function initEstimation() {
   const root = qs('[data-estimation]');

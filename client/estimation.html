@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <base href="/client/">
   <title>Estimer mon bien — Immolode</title>
 </head>
 <body>
@@ -31,7 +30,6 @@
               <h2 class="stepper-title">Type de bien</h2>
               <p class="stepper-subtitle">Sélectionnez la nature du bien à estimer.</p>
               <div class="stepper-choices">
-                ${''}
                 <label class="choice"><input type="radio" name="type" value="Appartement" required><span>Appartement</span></label>
                 <label class="choice"><input type="radio" name="type" value="Maison"><span>Maison</span></label>
                 <label class="choice"><input type="radio" name="type" value="Villa"><span>Villa</span></label>
@@ -100,9 +98,9 @@
   <div id="footer-slot"></div>
 
   <script type="module">
-    import { initPage } from './includes/scripts.js';
-    import { initEstimation } from '../assets/js/estimation.js';
-    import { icon } from './includes/helpers.js';
+    import { initPage } from '/client/includes/scripts.js';
+    import { initEstimation } from '/assets/js/estimation.js';
+    import { icon } from '/client/includes/helpers.js';
 
     await initPage({ page: 'estimation', title: 'Estimer mon bien' });
 
@@ -110,7 +108,6 @@
 
     initEstimation();
 
-    // Affiche le bouton "Suivant" / "Précédent" selon l'étape
     const form = document.querySelector('[data-estimation] form');
     const nextBtn = form.querySelector('[data-step-next]');
     const prevBtn = form.querySelector('[data-step-prev]');

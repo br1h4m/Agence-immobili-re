@@ -1,5 +1,5 @@
 // assets/js/forms.js
-import { qs, qsa } from '../../client/includes/helpers.js';
+import { qs, qsa } from '/client/includes/helpers.js';
 
 export function initForms() {
   qsa('[data-contact-form]').forEach(setupForm);

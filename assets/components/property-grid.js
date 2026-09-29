@@ -1,5 +1,5 @@
 // assets/components/property-grid.js
-import { PropertyCard } from './property-card.js';
+import { PropertyCard } from '/assets/components/property-card.js';
 
 export function PropertyGrid(properties = [], { emptyMessage = 'Aucun bien ne correspond à votre recherche.' } = {}) {
   if (!properties.length) {

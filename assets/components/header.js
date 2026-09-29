@@ -1,6 +1,6 @@
 // assets/components/header.js
-import { CONFIG } from '../../client/data/config.js';
-import { url, asset, icon } from '../../client/includes/helpers.js';
+import { CONFIG } from '/client/data/config.js';
+import { url, asset, icon } from '/client/includes/helpers.js';
 
 export function Header({ activePage = '' } = {}) {
   const navItems = CONFIG.NAV.map((item) => {

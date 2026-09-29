@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <base href="/client/">
   <title>Contact — Immolode</title>
 </head>
 <body>
@@ -72,11 +71,11 @@
   <div id="footer-slot"></div>
 
   <script type="module">
-    import { initPage } from './includes/scripts.js';
-    import { initForms } from '../assets/js/forms.js';
-    import { ContactForm } from '../assets/components/contact-form.js';
-    import { CONFIG } from './data/config.js';
-    import { icon, telLink, whatsappLink, escapeHTML } from './includes/helpers.js';
+    import { initPage } from '/client/includes/scripts.js';
+    import { initForms } from '/assets/js/forms.js';
+    import { ContactForm } from '/assets/components/contact-form.js';
+    import { CONFIG } from '/client/data/config.js';
+    import { icon, telLink, whatsappLink, escapeHTML } from '/client/includes/helpers.js';
 
     await initPage({ page: 'contact', title: 'Contact' });
 
@@ -90,6 +89,7 @@
     document.getElementById('val-mail').innerHTML = `<a href="mailto:${CONFIG.EMAIL}">${escapeHTML(CONFIG.EMAIL)}</a>`;
     document.getElementById('val-address').textContent = CONFIG.ADDRESS;
     document.getElementById('val-hours').textContent = CONFIG.HOURS;
+
     const wa = document.getElementById('val-wa');
     wa.href = whatsappLink('Bonjour, je souhaite avoir des informations.');
     wa.target = '_blank';

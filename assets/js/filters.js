@@ -1,8 +1,7 @@
 // assets/js/filters.js
-import { PROPERTIES } from '../data/properties.js';
+import { PROPERTIES } from '/client/data/properties.js';
 import { qs, qsa, formatPropertyPrice, formatLocation, formatSurface,
-         propertyUrl, icon, resizeImage, escapeHTML } from '../../client/includes/helpers.js';
-
+         propertyUrl, icon, resizeImage, escapeHTML } from '/client/includes/helpers.js';
 const DEFAULT_STATE = {
   transaction: 'Acheter',
   type: '',

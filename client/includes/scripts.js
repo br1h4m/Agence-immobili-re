@@ -15,11 +15,11 @@
 //     // ... rendu propre à la page
 //   </script>
 
-import { Header } from '../../assets/components/header.js';
-import { Footer } from '../../assets/components/footer.js';
-import { initMain } from '../../assets/js/main.js';
-import { initHead } from './head.js';
-import { installImageFallback, render } from './helpers.js';
+import { Header } from '/assets/components/header.js';
+import { Footer } from '/assets/components/footer.js';
+import { initMain } from '/assets/js/main.js';
+import { initHead } from '/client/includes/head.js';
+import { installImageFallback, render } from '/client/includes/helpers.js';
 
 /**
  * @param {Object} options

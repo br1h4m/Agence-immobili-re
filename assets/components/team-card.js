@@ -1,5 +1,5 @@
 // assets/components/team-card.js
-import { icon, telLink, escapeHTML, resizeImage } from '../../client/includes/helpers.js';
+import { icon, telLink, escapeHTML, resizeImage } from '/client/includes/helpers.js';
 
 export function TeamCard(member) {
   return `

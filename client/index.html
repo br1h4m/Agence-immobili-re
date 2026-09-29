@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <base href="/client/">
   <title>Immolode — Agence immobilière</title>
 </head>
 <body>
@@ -80,30 +79,27 @@
   <div id="footer-slot"></div>
 
   <script type="module">
-    import { initPage } from './includes/scripts.js';
-    import { initForms } from '../assets/js/forms.js';
-    import { Hero } from '../assets/components/hero.js';
-    import { CTASection } from '../assets/components/cta-section.js';
-    import { PropertyGrid } from '../assets/components/property-grid.js';
-    import { ServiceCard } from '../assets/components/service-card.js';
-    import { PROPERTIES } from './data/properties.js';
-    import { SERVICES } from './data/services.js';
-    import { icon } from './includes/helpers.js';
+    import { initPage } from '/client/includes/scripts.js';
+    import { initForms } from '/assets/js/forms.js';
+    import { Hero } from '/assets/components/hero.js';
+    import { CTASection } from '/assets/components/cta-section.js';
+    import { PropertyGrid } from '/assets/components/property-grid.js';
+    import { ServiceCard } from '/assets/components/service-card.js';
+    import { PROPERTIES } from '/client/data/properties.js';
+    import { SERVICES } from '/client/data/services.js';
+    import { icon } from '/client/includes/helpers.js';
 
     await initPage({ page: 'accueil', title: 'Accueil' });
 
     document.getElementById('hero-slot').innerHTML = Hero();
     document.getElementById('cta-slot').innerHTML = CTASection();
 
-    // Biens à la une
     const featured = PROPERTIES.filter((p) => p.isFeatured).slice(0, 6);
     document.getElementById('featured-properties').innerHTML = PropertyGrid(featured);
 
-    // Services
     document.getElementById('services-grid').innerHTML =
       SERVICES.slice(0, 3).map(ServiceCard).join('');
 
-    // Raisons
     const reasons = [
       { icon: 'compass', title: 'Expertise locale', text: "Une connaissance fine du marché et des quartiers sur lesquels nous opérons." },
       { icon: 'star', title: 'Biens sélectionnés', text: "Chaque propriété est visitée et vérifiée avant sa mise en ligne." },
@@ -119,7 +115,6 @@
 
     initForms();
 
-    // Force la visibilité des éléments injectés après l'observation initiale
     document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
   </script>
 </body>

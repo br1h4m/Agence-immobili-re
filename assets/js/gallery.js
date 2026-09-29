@@ -1,5 +1,5 @@
 // assets/js/gallery.js
-import { qs, qsa, lockScroll, resizeImage } from '../../client/includes/helpers.js';
+import { qs, qsa, lockScroll, resizeImage } from '/client/includes/helpers.js';
 
 export function initGallery(images = []) {
   const root = qs('[data-gallery]');

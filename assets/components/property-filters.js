@@ -1,5 +1,5 @@
 // assets/components/property-filters.js
-import { icon } from '../../client/includes/helpers.js';
+import { icon } from '/client/includes/helpers.js';
 
 const TYPES = ['Appartement', 'Villa', 'Maison', 'Terrain', 'Local', 'Bureau'];
 const AMENITIES = ['Garage', 'Jardin', 'Piscine', 'Terrasse', 'Ascenseur', 'Meublé'];

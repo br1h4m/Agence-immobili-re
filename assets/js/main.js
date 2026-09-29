@@ -1,5 +1,5 @@
 // assets/js/main.js
-import { qs, qsa, lockScroll } from '../../client/includes/helpers.js';
+import { qs, qsa, lockScroll } from '/client/includes/helpers.js';
 
 export function initMain() {
   initHeaderScroll();

@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <base href="/client/">
   <title>Détail du bien — Immolode</title>
 </head>
 <body>
@@ -17,20 +16,18 @@
   <div id="footer-slot"></div>
 
   <script type="module">
-    import { initPage } from './includes/scripts.js';
-    import { initForms } from '../assets/js/forms.js';
-    import { initGallery } from '../assets/js/gallery.js';
-    import { PropertyGallery } from '../assets/components/property-gallery.js';
-    import { PropertyFeatures } from '../assets/components/property-features.js';
-    import { ContactForm } from '../assets/components/contact-form.js';
-    import { PropertyCard } from '../assets/components/property-card.js';
-    import { PROPERTIES } from './data/properties.js';
+    import { initPage } from '/client/includes/scripts.js';
+    import { initForms } from '/assets/js/forms.js';
+    import { initGallery } from '/assets/js/gallery.js';
+    import { PropertyGallery } from '/assets/components/property-gallery.js';
+    import { PropertyFeatures } from '/assets/components/property-features.js';
+    import { ContactForm } from '/assets/components/contact-form.js';
+    import { PropertyCard } from '/assets/components/property-card.js';
+    import { PROPERTIES } from '/client/data/properties.js';
     import {
       getPropertyId, formatPropertyPrice, formatLocation, formatSurface,
-      formatDate, icon, telLink, whatsappLink, propertyWhatsAppMessage,
-      escapeHTML, formatPrice
-    } from './includes/helpers.js';
-    import { CONFIG } from './data/config.js';
+      icon, telLink, whatsappLink, propertyWhatsAppMessage, escapeHTML
+    } from '/client/includes/helpers.js';
 
     const id = getPropertyId();
     const property = PROPERTIES.find((p) => String(p.id) === String(id));
@@ -56,8 +53,8 @@
         ['Chambres', property.bedrooms || null],
         ['Salles de bain', property.bathrooms || null],
         ['Garage', property.garage ? 'Oui' : 'Non'],
-        ['Étage', property.floor != null ? `${property.floor}` : null],
-        ['Nombre d\'étages', property.floors || null],
+        ['Étage', property.floor != null ? String(property.floor) : null],
+        ["Nombre d'étages", property.floors || null],
         ['Année de construction', property.year || null]
       ].filter(([, v]) => v != null && v !== '');
 

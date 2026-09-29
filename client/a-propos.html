@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <base href="/client/">
   <title>À propos — Immolode</title>
 </head>
 <body>
@@ -105,10 +104,10 @@
   <div id="footer-slot"></div>
 
   <script type="module">
-    import { initPage } from './includes/scripts.js';
-    import { TeamCard } from '../assets/components/team-card.js';
-    import { CTASection } from '../assets/components/cta-section.js';
-    import { TEAM } from './data/team.js';
+    import { initPage } from '/client/includes/scripts.js';
+    import { TeamCard } from '/assets/components/team-card.js';
+    import { CTASection } from '/assets/components/cta-section.js';
+    import { TEAM } from '/client/data/team.js';
 
     await initPage({ page: 'a-propos', title: 'À propos' });
 
