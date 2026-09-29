@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <base href="/client/">
+  <title>À propos — Immolode</title>
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1 class="section-title">À propos</h1>
+        <p class="section-lead">Une agence indépendante, proche de ses clients et attachée à la qualité de son accompagnement.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="split">
+          <div class="split-media">
+            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80" alt="" loading="lazy">
+          </div>
+          <div class="split-body">
+            <span class="section-eyebrow">Notre histoire</span>
+            <h2 class="section-title" style="margin-top:8px">Une agence fondée sur le terrain</h2>
+            <p class="text-muted">
+              Immolode est née de la conviction qu'une transaction immobilière réussie repose avant
+              tout sur la confiance. Depuis nos débuts, nous avons construit une méthode simple :
+              visiter chaque bien, écouter chaque projet, et ne proposer que ce qui correspond
+              réellement aux attentes.
+            </p>
+            <p class="text-muted">
+              Cette exigence nous a permis d'accompagner des centaines de familles et
+              d'investisseurs, sur des projets résidentiels comme professionnels.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--soft">
+      <div class="container">
+        <div class="split">
+          <div class="split-body">
+            <span class="section-eyebrow">Notre mission</span>
+            <h2 class="section-title" style="margin-top:8px">Rendre chaque projet plus simple</h2>
+            <p class="text-muted">
+              Nous croyons qu'un projet immobilier ne doit pas être une source de stress.
+              Notre rôle est de simplifier chaque étape : recherche, visites, négociation,
+              démarches administratives. Vous restez décisionnaire, nous nous occupons du reste.
+            </p>
+            <ul class="timeline" style="margin-top:32px">
+              <li class="timeline-item">
+                <span class="timeline-year">2015</span>
+                <p class="text-muted">Ouverture de la première agence et premières transactions.</p>
+              </li>
+              <li class="timeline-item">
+                <span class="timeline-year">2019</span>
+                <p class="text-muted">Extension de l'activité à la gestion locative et à l'estimation.</p>
+              </li>
+              <li class="timeline-item">
+                <span class="timeline-year">2024</span>
+                <p class="text-muted">Plus de 150 biens accompagnés et une équipe de 8 conseillers.</p>
+              </li>
+            </ul>
+          </div>
+          <div class="split-media">
+            <img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=80" alt="" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <header class="section-head section-head--center">
+          <span class="section-eyebrow">Notre équipe</span>
+          <h2 class="section-title">Des conseillers disponibles</h2>
+          <p class="section-lead">Chaque projet est suivi par un interlocuteur unique.</p>
+        </header>
+        <div id="team-grid" class="property-grid"></div>
+      </div>
+    </section>
+
+    <section class="section section--soft">
+      <div class="container">
+        <header class="section-head section-head--center">
+          <span class="section-eyebrow">Nos valeurs</span>
+          <h2 class="section-title">Ce qui nous guide</h2>
+        </header>
+        <div class="reasons-grid">
+          <article class="reason"><h3 class="reason-title">Transparence</h3><p class="reason-text">Une information claire sur les biens, les prix et les démarches.</p></article>
+          <article class="reason"><h3 class="reason-title">Rigueur</h3><p class="reason-text">Des dossiers vérifiés et un suivi sans approximation.</p></article>
+          <article class="reason"><h3 class="reason-title">Proximité</h3><p class="reason-text">Une équipe accessible et réactive, à votre écoute.</p></article>
+          <article class="reason"><h3 class="reason-title">Engagement</h3><p class="reason-text">Nous nous impliquons jusqu'à la concrétisation de votre projet.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <div id="cta-slot"></div>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from './includes/scripts.js';
+    import { TeamCard } from '../assets/components/team-card.js';
+    import { CTASection } from '../assets/components/cta-section.js';
+    import { TEAM } from './data/team.js';
+
+    await initPage({ page: 'a-propos', title: 'À propos' });
+
+    document.getElementById('team-grid').innerHTML = TEAM.map(TeamCard).join('');
+    document.getElementById('cta-slot').innerHTML = CTASection();
+  </script>
+</body>
+</html>

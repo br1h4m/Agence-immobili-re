@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <base href="/client/">
+  <title>Contact — Immolode</title>
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1 class="section-title">Contact</h1>
+        <p class="section-lead">Une question, un projet ? Notre équipe vous répond dans les plus brefs délais.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="contact-grid">
+          <div class="contact-info">
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-phone"></span>
+              <div>
+                <p class="contact-info-label">Téléphone</p>
+                <p class="contact-info-value" id="val-phone"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-mail"></span>
+              <div>
+                <p class="contact-info-label">Email</p>
+                <p class="contact-info-value" id="val-mail"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-pin"></span>
+              <div>
+                <p class="contact-info-label">Adresse</p>
+                <p class="contact-info-value" id="val-address"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-clock"></span>
+              <div>
+                <p class="contact-info-label">Horaires</p>
+                <p class="contact-info-value" id="val-hours"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-wa"></span>
+              <div>
+                <p class="contact-info-label">WhatsApp</p>
+                <p class="contact-info-value"><a id="val-wa">Discuter sur WhatsApp</a></p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="contact-form-slot"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:64px">
+          <div class="map-placeholder">Carte interactive</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from './includes/scripts.js';
+    import { initForms } from '../assets/js/forms.js';
+    import { ContactForm } from '../assets/components/contact-form.js';
+    import { CONFIG } from './data/config.js';
+    import { icon, telLink, whatsappLink, escapeHTML } from './includes/helpers.js';
+
+    await initPage({ page: 'contact', title: 'Contact' });
+
+    document.getElementById('ico-phone').innerHTML = icon('phone', { size: 20 });
+    document.getElementById('ico-mail').innerHTML = icon('mail', { size: 20 });
+    document.getElementById('ico-pin').innerHTML = icon('pin', { size: 20 });
+    document.getElementById('ico-clock').innerHTML = icon('clock', { size: 20 });
+    document.getElementById('ico-wa').innerHTML = icon('whatsapp', { size: 20 });
+
+    document.getElementById('val-phone').innerHTML = `<a href="${telLink()}">${escapeHTML(CONFIG.PHONE)}</a>`;
+    document.getElementById('val-mail').innerHTML = `<a href="mailto:${CONFIG.EMAIL}">${escapeHTML(CONFIG.EMAIL)}</a>`;
+    document.getElementById('val-address').textContent = CONFIG.ADDRESS;
+    document.getElementById('val-hours').textContent = CONFIG.HOURS;
+    const wa = document.getElementById('val-wa');
+    wa.href = whatsappLink('Bonjour, je souhaite avoir des informations.');
+    wa.target = '_blank';
+    wa.rel = 'noopener';
+
+    document.getElementById('contact-form-slot').innerHTML = ContactForm({
+      title: 'Nous écrire',
+      contextLabel: 'Un conseiller vous répond sous 24 h.'
+    });
+
+    initForms();
+  </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <base href="/client/">
+  <title>Nos biens — Immolode</title>
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1 class="section-title">Nos biens</h1>
+        <p class="section-lead">Découvrez notre sélection de propriétés disponibles à la vente et à la location.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:40px;align-items:start"
+             id="biens-layout">
+          <div id="filters-slot"></div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+              <p id="properties-count" style="margin:0;color:var(--color-muted)"></p>
+              <label style="display:inline-flex;align-items:center;gap:8px;font-size:.88rem">
+                <span class="text-muted">Trier par</span>
+                <select id="properties-sort" style="width:auto">
+                  <option value="recent">Plus récents</option>
+                  <option value="price-asc">Prix croissant</option>
+                  <option value="price-desc">Prix décroissant</option>
+                  <option value="surface-asc">Surface croissante</option>
+                  <option value="surface-desc">Surface décroissante</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="properties-results"></div>
+
+            <div style="text-align:center;margin-top:40px">
+              <button id="properties-load-more" class="btn btn-outline" hidden>Charger plus de biens</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary filters-open-btn" data-filters-open>
+          Filtres
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from './includes/scripts.js';
+    import { PropertyFilters } from '../assets/components/property-filters.js';
+    import { initBiensPage, getFilterOptions } from '../assets/js/filters.js';
+
+    await initPage({ page: 'biens', title: 'Nos biens' });
+
+    const { wilayas, cities } = getFilterOptions();
+    document.getElementById('filters-slot').innerHTML = PropertyFilters({ wilayas, cities });
+
+    initBiensPage();
+
+    // Repositionne la sidebar en mobile (filtres en modal)
+    const adjustLayout = () => {
+      const layout = document.getElementById('biens-layout');
+      if (!layout) return;
+      if (window.innerWidth <= 640) {
+        layout.style.gridTemplateColumns = '1fr';
+      } else {
+        layout.style.gridTemplateColumns = '280px minmax(0,1fr)';
+      }
+    };
+    adjustLayout();
+    window.addEventListener('resize', adjustLayout);
+
+    // Empêche le scroll en arrière-plan quand les filtres sont ouverts
+    const observer = new MutationObserver(() => {
+      const isOpen = document.querySelector('[data-filters]')?.classList.contains('is-open');
+      document.documentElement.classList.toggle('no-scroll', Boolean(isOpen));
+    });
+    observer.observe(document.querySelector('[data-filters]') || document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+  </script>
+</body>
+</html>

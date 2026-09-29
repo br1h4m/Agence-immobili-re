@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <base href="/client/">
+  <title>Page introuvable — Immolode</title>
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main style="padding:160px 0;text-align:center">
+    <div class="container">
+      <span class="section-eyebrow">Erreur 404</span>
+      <h1 class="section-title" style="font-family:var(--font-serif);font-weight:500;margin-top:8px">Page introuvable</h1>
+      <p class="section-lead">La page que vous cherchez n'existe pas ou a été déplacée.</p>
+      <a class="btn btn-primary" href="/client/" style="margin-top:24px">Retour à l'accueil</a>
+    </div>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from '/client/includes/scripts.js';
+    await initPage({ page: '', title: 'Page introuvable' });
+  </script>
+</body>
+</html>

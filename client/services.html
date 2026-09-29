@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <base href="/client/">
+  <title>Services — Immolode</title>
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1 class="section-title">Nos services</h1>
+        <p class="section-lead">Un accompagnement complet pour tous vos projets immobiliers.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div id="services-list" class="property-grid"></div>
+      </div>
+    </section>
+
+    <div id="cta-slot"></div>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from './includes/scripts.js';
+    import { ServiceCard } from '../assets/components/service-card.js';
+    import { CTASection } from '../assets/components/cta-section.js';
+    import { SERVICES } from './data/services.js';
+
+    await initPage({ page: 'services', title: 'Services' });
+
+    document.getElementById('services-list').innerHTML =
+      SERVICES.map(ServiceCard).join('');
+    document.getElementById('cta-slot').innerHTML = CTASection({
+      title: 'Besoin d\'un conseil personnalisé ?',
+      subtitle: 'Nos équipes sont disponibles pour étudier votre projet.'
+    });
+  </script>
+</body>
+</html>
