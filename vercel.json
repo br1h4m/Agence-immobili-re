@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/", "destination": "/client/index.html" },
+    { "source": "/client", "destination": "/client/index.html" },
+    { "source": "/client/bien/:id", "destination": "/client/bien.html" }
+  ]
+}
