@@ -25,6 +25,14 @@ export function PropertyFilters({ wilayas = [], cities = [] } = {}) {
 
       <form class="filters-form" data-filters-form>
         <fieldset class="filter-group">
+          <legend>Recherche rapide</legend>
+          <label class="filter-field">
+            <span>Mot-clé ou localisation</span>
+            <input type="text" name="q" placeholder="Ville, quartier, mot-clé...">
+          </label>
+        </fieldset>
+
+        <fieldset class="filter-group">
           <legend>Transaction</legend>
           <div class="filter-toggle" role="radiogroup" aria-label="Type de transaction">
             <label><input type="radio" name="transaction" value="Acheter" checked><span>Acheter</span></label>

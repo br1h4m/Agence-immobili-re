@@ -99,11 +99,19 @@ export function initHead(options = {}) {
   // Favicon
   upsertLink('icon', asset('images/logo.svg'), { type: 'image/svg+xml' });
 
-  // Google Fonts (non bloquant : display=swap)
+  // Si les feuilles de style sont déjà présentes dans le HTML statique, ne pas bloquer ni dupliquer
+  const hasStylesheets = STYLESHEETS.every((file) =>
+    Boolean(document.head.querySelector(`link[rel="stylesheet"][href*="${file}"]`))
+  );
+
+  if (hasStylesheets) {
+    return Promise.resolve();
+  }
+
+  // Fallback dynamique si non inclus dans le HTML statique
   upsertLink('preconnect', 'https://fonts.googleapis.com');
   upsertLink('preconnect', 'https://fonts.gstatic.com', { crossorigin: '' });
   loadStylesheet(FONTS_HREF);
 
-  // CSS du site (bloquant pour le premier rendu)
   return Promise.all(STYLESHEETS.map((file) => loadStylesheet(asset(file)))).then(() => undefined);
 }

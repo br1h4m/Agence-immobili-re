@@ -103,6 +103,7 @@
   background: var(--color-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border-soft);
   overflow: hidden;
   padding: 6px;
 }
@@ -118,7 +119,7 @@
 .search-field select { background-image: none; padding-right: 0; }
 .search-field select:focus, .search-field input:focus { box-shadow: none; }
 .search-submit { margin: 6px; padding: 12px 20px; }
-.search-bar--compact { box-shadow: var(--shadow-sm); }
+.search-bar--compact { box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); }
 
 /* ---------- Property card ---------- */
 .property-card {
