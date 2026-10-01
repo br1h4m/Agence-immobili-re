@@ -13,7 +13,7 @@ function setupForm(form) {
     e.preventDefault();
     if (!validate(form)) return;
 
-    // Simulation d'envoi (remplacé par fetch plus tard)
+    // Simulation d'envoi et persistance locale
     const feedback = form.querySelector('[data-form-feedback]');
     const button = form.querySelector('button[type="submit"]');
 
@@ -22,6 +22,25 @@ function setupForm(form) {
       button.dataset.label = button.innerHTML;
       button.innerHTML = 'Envoi en cours...';
     }
+
+    try {
+      const data = new FormData(form);
+      const raw = localStorage.getItem('immo_demandes');
+      const list = raw ? JSON.parse(raw) : [];
+      const newDemande = {
+        id: Date.now(),
+        type: 'Contact',
+        nom: `${data.get('firstname') || ''} ${data.get('lastname') || ''}`.trim() || 'Visiteur',
+        email: data.get('email') || '',
+        phone: data.get('phone') || '',
+        subject: data.get('subject') || 'Prise de contact',
+        message: data.get('message') || '',
+        status: 'Nouveau',
+        createdAt: new Date().toISOString()
+      };
+      list.unshift(newDemande);
+      localStorage.setItem('immo_demandes', JSON.stringify(list));
+    } catch (_) {}
 
     setTimeout(() => {
       form.reset();

@@ -15,8 +15,8 @@
 const img = (id, w = 1400) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
 
-// ⚠️ DONNÉES MOCKÉES — À SUPPRIMER quand le backend sera prêt
-export const PROPERTIES = [
+// DONNEES MOCKEES - A SUPPRIMER quand le backend sera pret
+const DEFAULT_PROPERTIES = [
   {
     id: 1,
     reference: 'IML-001',
@@ -416,3 +416,21 @@ export const PROPERTIES = [
     createdAt: '2026-08-12'
   }
 ];
+
+function getInitialProperties() {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = localStorage.getItem('immo_properties');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      localStorage.setItem('immo_properties', JSON.stringify(DEFAULT_PROPERTIES));
+    } catch (_) {}
+  }
+  return DEFAULT_PROPERTIES;
+}
+
+export const PROPERTIES = getInitialProperties();

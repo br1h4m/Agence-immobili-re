@@ -1,7 +1,7 @@
 // client/data/config.js
 // MODULE ES NAVIGATEUR — chargé via <script type="module"> (import / export uniquement)
-// Configuration globale du site : identité, coordonnées, navigation.
-// ⚠️ Les coordonnées ci-dessous sont des PLACEHOLDERS à remplacer par les vraies données.
+// Configuration globale du site : identite, coordonnees, navigation.
+// DONNEES MOCKEES - A SUPPRIMER quand le backend sera pret
 
 export const CONFIG = Object.freeze({
   // ---- Chemins ----
@@ -28,6 +28,13 @@ export const CONFIG = Object.freeze({
   CURRENCY: 'DA',
   LOCALE: 'fr-FR',
   PROPERTIES_PER_PAGE: 9,
+
+  // ---- Statistiques cles ----
+  STATS: [
+    { value: '10+', label: "Années d'expérience" },
+    { value: '150+', label: 'Biens accompagnés' },
+    { value: '500+', label: 'Clients satisfaits' }
+  ],
 
   // ---- Navigation (partagée par header.js et footer.js) ----
   // "path" est relatif à BASE_URL : utiliser url(path) de helpers.js

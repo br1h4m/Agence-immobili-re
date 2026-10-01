@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tableau de bord — Administration Immolode</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/admin/assets/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <div id="sidebar-slot"></div>
+
+    <div class="admin-main-wrap">
+      <div id="topbar-slot"></div>
+
+      <main class="admin-content" id="dashboard-content">
+        <!-- Rendu dynamique par index.js -->
+        <div style="padding: 40px; text-align: center; color: var(--admin-text-muted);">
+          Chargement du tableau de bord...
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="/admin/index.js"></script>
+</body>
+</html>

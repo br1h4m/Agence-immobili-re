@@ -3,7 +3,7 @@
 // "link" est un chemin relatif à BASE_URL : utiliser url(service.link) de helpers.js.
 // "icon" référence un nom d'icône de helpers.js (fonction icon()).
 
-// ⚠️ DONNÉES MOCKÉES — À SUPPRIMER quand le backend sera prêt
+// DONNEES MOCKEES - A SUPPRIMER quand le backend sera pret
 export const SERVICES = [
   {
     id: 1,

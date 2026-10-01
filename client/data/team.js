@@ -1,7 +1,7 @@
 // client/data/team.js
 // MODULE ES NAVIGATEUR — aucune dépendance.
 
-// ⚠️ DONNÉES MOCKÉES — À SUPPRIMER quand le backend sera prêt
+// DONNEES MOCKEES - A SUPPRIMER quand le backend sera pret
 export const TEAM = [
   {
     id: 1,

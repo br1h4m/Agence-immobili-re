@@ -73,11 +73,7 @@
               entreprises dans leurs projets immobiliers. Notre connaissance du terrain et notre
               exigence sur la qualité des biens présentés font la différence.
             </p>
-            <div class="stats-grid" style="margin:24px 0 32px">
-              <div class="stat"><p class="stat-value">10+</p><p class="stat-label">Années d'expérience</p></div>
-              <div class="stat"><p class="stat-value">150+</p><p class="stat-label">Biens accompagnés</p></div>
-              <div class="stat"><p class="stat-value">500+</p><p class="stat-label">Clients satisfaits</p></div>
-            </div>
+            <div id="stats-grid" class="stats-grid" style="margin:24px 0 32px"></div>
             <a class="btn btn-outline" href="/client/a-propos">En savoir plus</a>
           </div>
         </div>
@@ -98,9 +94,17 @@
     import { ServiceCard } from '/assets/components/service-card.js';
     import { PROPERTIES } from '/client/data/properties.js';
     import { SERVICES } from '/client/data/services.js';
+    import { CONFIG } from '/client/data/config.js';
     import { icon } from '/client/includes/helpers.js';
 
     await initPage({ page: 'accueil', title: 'Accueil' });
+
+    const statsSlot = document.getElementById('stats-grid');
+    if (statsSlot && CONFIG.STATS) {
+      statsSlot.innerHTML = CONFIG.STATS.map((s) => `
+        <div class="stat"><p class="stat-value">${s.value}</p><p class="stat-label">${s.label}</p></div>
+      `).join('');
+    }
 
     document.getElementById('hero-slot').innerHTML = Hero();
     document.getElementById('cta-slot').innerHTML = CTASection();

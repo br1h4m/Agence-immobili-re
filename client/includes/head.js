@@ -2,7 +2,7 @@
 // MODULE ES NAVIGATEUR — remplace l'ancien include <head> : injecte dans document.head
 // les métadonnées, Google Fonts et les feuilles de style.
 //
-// ⚠️ Les pages HTML gardent seulement <meta charset="UTF-8"> (doit figurer dans le HTML statique)
+// Les pages HTML gardent seulement <meta charset="UTF-8"> (doit figurer dans le HTML statique)
 //    et NE contiennent AUCUN <link rel="stylesheet"> : tout est injecté ici.
 //
 // Note SEO : les métadonnées sont rendues côté navigateur. Un futur backend / SSR pourra

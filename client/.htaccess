@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /client/
+
+# Fiche d'un bien : /client/bien/12 -> /client/bien.html?id=12
+RewriteRule ^bien/([0-9]+)/?$ bien.html?id=$1 [QSA,L]
+
+# URLs propres : /client/biens -> /client/biens.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+?)/?$ $1.html [L,QSA]

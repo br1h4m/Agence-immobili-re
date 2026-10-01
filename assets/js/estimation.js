@@ -53,9 +53,39 @@ export function initEstimation() {
     });
     if (!valid) return;
 
-    // Simulation d'envoi
+    // Simulation d'envoi et persistance locale
     const submit = form.querySelector('button[type="submit"]');
     if (submit) { submit.disabled = true; submit.textContent = 'Envoi...'; }
+
+    try {
+      const data = new FormData(form);
+      const raw = localStorage.getItem('immo_demandes');
+      const list = raw ? JSON.parse(raw) : [];
+      const newDemande = {
+        id: Date.now(),
+        type: 'Estimation',
+        nom: `${data.get('firstname') || ''} ${data.get('lastname') || ''}`.trim() || 'Visiteur',
+        email: data.get('email') || '',
+        phone: data.get('phone') || '',
+        subject: `Estimation : ${data.get('type') || 'Bien'} à ${data.get('wilaya') || ''}`,
+        message: data.get('message') || '',
+        details: {
+          type: data.get('type') || '',
+          wilaya: data.get('wilaya') || '',
+          commune: data.get('commune') || '',
+          quartier: data.get('quartier') || '',
+          surface: data.get('surface') || '',
+          land: data.get('land') || '',
+          bedrooms: data.get('bedrooms') || '',
+          bathrooms: data.get('bathrooms') || '',
+          garage: data.get('garage') ? 'Oui' : 'Non'
+        },
+        status: 'Nouveau',
+        createdAt: new Date().toISOString()
+      };
+      list.unshift(newDemande);
+      localStorage.setItem('immo_demandes', JSON.stringify(list));
+    } catch (_) {}
 
     setTimeout(() => {
       form.hidden = true;
