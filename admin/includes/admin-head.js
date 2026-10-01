@@ -1,4 +1,4 @@
-// admin/includes/admin-head.js
+﻿// admin/includes/admin-head.js
 // MODULE ES NAVIGATEUR — injecte dans document.head les métadonnées et la feuille de style admin.
 // Suit strictement le même principe que client/includes/head.js.
 
@@ -49,8 +49,8 @@ function loadStylesheet(href) {
 
 export function updateAdminHead({ title } = {}) {
   const fullTitle = title
-    ? `${title} — Administration Immolode`
-    : 'Administration — Immolode';
+    ? `${title} — Administration Imolode`
+    : 'Administration — Imolode';
   document.title = fullTitle;
 }
 
@@ -78,3 +78,4 @@ export function initAdminHead({ title } = {}) {
 
   return loadStylesheet(STYLESHEET_HREF);
 }
+

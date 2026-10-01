@@ -12,7 +12,7 @@ if (!redirectIfAuth()) {
   const btnFillDemo = document.getElementById('btn-fill-demo');
 
   btnFillDemo?.addEventListener('click', () => {
-    emailInput.value = 'admin@immolode.dz';
+    emailInput.value = 'gahamhocine2@gmail.com';
     passwordInput.value = 'admin123';
     emailInput.focus();
   });
@@ -47,3 +47,4 @@ if (!redirectIfAuth()) {
     }
   });
 }
+

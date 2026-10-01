@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Immolode — Agence immobilière</title>
+  <title>Imolode — Agence immobilière</title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,7 +69,7 @@
             <span class="section-eyebrow">À propos</span>
             <h2 class="section-title" style="margin-top:8px">Une agence proche de ses clients</h2>
             <p class="text-muted">
-              Immolode accompagne depuis plusieurs années des familles, des investisseurs et des
+              Imolode accompagne depuis plusieurs années des familles, des investisseurs et des
               entreprises dans leurs projets immobiliers. Notre connaissance du terrain et notre
               exigence sur la qualité des biens présentés font la différence.
             </p>
@@ -113,7 +113,7 @@
     document.getElementById('featured-properties').innerHTML = PropertyGrid(featured);
 
     document.getElementById('services-grid').innerHTML =
-      SERVICES.slice(0, 3).map(ServiceCard).join('');
+      SERVICES.map(ServiceCard).join('');
 
     const reasons = [
       { icon: 'compass', title: 'Expertise locale', text: "Une connaissance fine du marché et des quartiers sur lesquels nous opérons." },

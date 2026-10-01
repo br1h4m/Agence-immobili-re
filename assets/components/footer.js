@@ -1,6 +1,6 @@
 // assets/components/footer.js
 import { CONFIG } from '/client/data/config.js';
-import { url, icon, whatsappLink } from '/client/includes/helpers.js';
+import { url, asset, icon, whatsappLink } from '/client/includes/helpers.js';
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -22,16 +22,17 @@ export function Footer() {
         <div class="footer-grid">
           <div class="footer-col footer-col--brand">
             <a href="${url('/')}" class="brand brand--footer">
+              <img src="${asset('images/logo.svg')}" alt="" class="brand-logo" width="30" height="30">
               <span class="brand-name">${CONFIG.AGENCY_NAME}</span>
             </a>
             <p class="footer-text">
-              Agence immobilière indépendante. Nous accompagnons vendeurs, acheteurs,
+              ${escapeHTML(CONFIG.CARD_TITLE || CONFIG.AGENCY_LEGAL)}.
+              ${escapeHTML(CONFIG.MANAGER)}, ${escapeHTML(CONFIG.MANAGER_ROLE)}. Nous accompagnons vendeurs, acheteurs,
               propriétaires et locataires sur l'ensemble de leurs projets.
             </p>
             <ul class="footer-social">
-              <li><a href="${CONFIG.SOCIAL.facebook}" aria-label="Facebook" rel="noopener">${icon('facebook', { size: 18 })}</a></li>
-              <li><a href="${CONFIG.SOCIAL.instagram}" aria-label="Instagram" rel="noopener">${icon('instagram', { size: 18 })}</a></li>
-              <li><a href="${whatsappLink()}" aria-label="WhatsApp" rel="noopener">${icon('whatsapp', { size: 18 })}</a></li>
+              <li><a href="${CONFIG.SOCIAL.facebook}" aria-label="Facebook: ${escapeHTML(CONFIG.SOCIAL.facebookLabel)}" target="_blank" rel="noopener">${icon('facebook', { size: 18 })}</a></li>
+              <li><a href="${whatsappLink()}" aria-label="WhatsApp" target="_blank" rel="noopener">${icon('whatsapp', { size: 18 })}</a></li>
             </ul>
           </div>
 
@@ -48,10 +49,11 @@ export function Footer() {
           <div class="footer-col">
             <h4 class="footer-heading">Contact</h4>
             <ul class="footer-list footer-contact">
+              <li>${icon('user', { size: 16 })}<span><strong>${escapeHTML(CONFIG.MANAGER)}</strong> (${escapeHTML(CONFIG.MANAGER_ROLE)})</span></li>
               <li>${icon('phone', { size: 16 })}<a href="tel:${CONFIG.PHONE_RAW}">${CONFIG.PHONE}</a></li>
               <li>${icon('mail', { size: 16 })}<a href="mailto:${CONFIG.EMAIL}">${CONFIG.EMAIL}</a></li>
               <li>${icon('pin', { size: 16 })}<span>${CONFIG.ADDRESS}</span></li>
-              <li>${icon('clock', { size: 16 })}<span>${CONFIG.HOURS}</span></li>
+              <li>${icon('facebook', { size: 16 })}<a href="${CONFIG.SOCIAL.facebook}" target="_blank" rel="noopener">${escapeHTML(CONFIG.SOCIAL.facebookLabel)}</a></li>
             </ul>
           </div>
         </div>

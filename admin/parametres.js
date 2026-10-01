@@ -1,5 +1,5 @@
 // admin/parametres.js
-// MODULE ES NAVIGATEUR — gestion des paramètres généraux de l'agence Immolode.
+// MODULE ES NAVIGATEUR — gestion des paramètres généraux de l'agence Imolode.
 
 import {
   initAdminLayout, adminIcon, showToast, confirmModal, escapeHTML
@@ -49,7 +49,7 @@ async function init() {
           <div class="form-grid">
             <div class="form-col-6 form-group">
               <label class="form-label" for="setting-agencyName">Nom de l'agence <span class="required">*</span></label>
-              <input type="text" class="form-input" id="setting-agencyName" required value="${escapeHTML(s.agencyName || 'Immolode')}">
+              <input type="text" class="form-input" id="setting-agencyName" required value="${escapeHTML(s.agencyName || 'Imolode')}">
             </div>
 
             <div class="form-col-6 form-group">
@@ -78,27 +78,27 @@ async function init() {
           <div class="form-grid">
             <div class="form-col-6 form-group">
               <label class="form-label" for="setting-phone">Téléphone principal <span class="required">*</span></label>
-              <input type="text" class="form-input" id="setting-phone" required value="${escapeHTML(s.phone || '')}" placeholder="+213 34 12 34 56">
+              <input type="text" class="form-input" id="setting-phone" required value="${escapeHTML(s.phone || '')}" placeholder="0661.56.03.85">
             </div>
 
             <div class="form-col-6 form-group">
               <label class="form-label" for="setting-whatsapp">Numéro WhatsApp</label>
-              <input type="text" class="form-input" id="setting-whatsapp" value="${escapeHTML(s.whatsapp || '')}" placeholder="+213 550 12 34 56">
+              <input type="text" class="form-input" id="setting-whatsapp" value="${escapeHTML(s.whatsapp || '')}" placeholder="213661560385">
             </div>
 
             <div class="form-col-6 form-group">
               <label class="form-label" for="setting-email">Adresse e-mail officielle <span class="required">*</span></label>
-              <input type="email" class="form-input" id="setting-email" required value="${escapeHTML(s.email || '')}" placeholder="contact@immolode.dz">
+              <input type="email" class="form-input" id="setting-email" required value="${escapeHTML(s.email || '')}" placeholder="gahamhocine2@gmail.com">
             </div>
 
             <div class="form-col-6 form-group">
               <label class="form-label" for="setting-hours">Horaires d'ouverture</label>
-              <input type="text" class="form-input" id="setting-hours" value="${escapeHTML(s.hours || '')}" placeholder="Dimanche - Jeudi : 8h30 - 17h30">
+              <input type="text" class="form-input" id="setting-hours" value="${escapeHTML(s.hours || '')}" placeholder="Dimanche - Jeudi : 9h00 - 17h30">
             </div>
 
             <div class="form-col-12 form-group">
               <label class="form-label" for="setting-address">Adresse physique de l'agence</label>
-              <input type="text" class="form-input" id="setting-address" value="${escapeHTML(s.address || '')}" placeholder="Boulevard Colonel Amirouche, Béjaïa, Algérie">
+              <input type="text" class="form-input" id="setting-address" value="${escapeHTML(s.address || '')}" placeholder="41 Bld Soudani Boudjemaa El Mouradia - Alger">
             </div>
           </div>
         </div>
@@ -115,13 +115,13 @@ async function init() {
         <div class="card-body">
           <div class="form-grid">
             <div class="form-col-6 form-group">
-              <label class="form-label" for="setting-facebook">Page Facebook</label>
-              <input type="url" class="form-input" id="setting-facebook" value="${escapeHTML(s.facebook || '')}" placeholder="https://facebook.com/immolode">
+              <label class="form-label" for="setting-facebook">Page Facebook (Imolode Hydra)</label>
+              <input type="url" class="form-input" id="setting-facebook" value="${escapeHTML(s.facebook || '')}" placeholder="https://facebook.com/imolode.hydra">
             </div>
 
             <div class="form-col-6 form-group">
               <label class="form-label" for="setting-instagram">Profil Instagram</label>
-              <input type="url" class="form-input" id="setting-instagram" value="${escapeHTML(s.instagram || '')}" placeholder="https://instagram.com/immolode">
+              <input type="url" class="form-input" id="setting-instagram" value="${escapeHTML(s.instagram || '')}" placeholder="https://instagram.com/Imolode">
             </div>
 
             <div class="form-col-6 form-group">
@@ -227,3 +227,4 @@ function bindEvents() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+

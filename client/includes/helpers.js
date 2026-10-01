@@ -1,4 +1,4 @@
-// client/includes/helpers.js
+﻿// client/includes/helpers.js
 // MODULE ES NAVIGATEUR — fonctions utilitaires pures, partagées par les composants et les pages.
 // (import / export uniquement : pas de Node.js)
 
@@ -130,7 +130,7 @@ export const qsa = (selector, root = document) => [...root.querySelectorAll(sele
 export function render(target, html) {
   const element = typeof target === 'string' ? document.querySelector(target) : target;
   if (!element) {
-    console.warn(`[Immolode] Conteneur introuvable : ${target}`);
+    console.warn(`[Imolode] Conteneur introuvable : ${target}`);
     return null;
   }
   element.innerHTML = html;

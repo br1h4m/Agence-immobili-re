@@ -1,5 +1,5 @@
 // admin/utilisateurs.js
-// MODULE ES NAVIGATEUR — gestion des utilisateurs et conseillers de l'agence Immolode.
+// MODULE ES NAVIGATEUR — gestion des utilisateurs et conseillers de l'agence Imolode.
 
 import {
   initAdminLayout, adminIcon, showToast, confirmModal, escapeHTML
@@ -206,27 +206,28 @@ function openUserDrawer(id = null) {
         <div class="form-section">
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-nom">Nom complet <span class="required">*</span></label>
-            <input type="text" class="form-input" id="user-input-nom" required value="${escapeHTML(user?.nom || '')}" placeholder="Ex: Sarah Benali">
+            <input type="text" class="form-input" id="user-input-nom" required value="${escapeHTML(user?.nom || '')}" placeholder="Ex: G. Hocine">
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-poste">Poste / Fonction <span class="required">*</span></label>
-            <input type="text" class="form-input" id="user-input-poste" required value="${escapeHTML(user?.poste || '')}" placeholder="Ex: Conseillère Immobilier Résidentiel">
+            <input type="text" class="form-input" id="user-input-poste" required value="${escapeHTML(user?.poste || '')}" placeholder="Ex: Gérant">
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-email">Adresse e-mail <span class="required">*</span></label>
-            <input type="email" class="form-input" id="user-input-email" required value="${escapeHTML(user?.email || '')}" placeholder="sarah.benali@immolode.dz">
+            <input type="email" class="form-input" id="user-input-email" required value="${escapeHTML(user?.email || '')}" placeholder="gahamhocine2@gmail.com">
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-phone">Numéro de téléphone</label>
-            <input type="text" class="form-input" id="user-input-phone" value="${escapeHTML(user?.phone || '')}" placeholder="+213 550 00 00 00">
+            <input type="text" class="form-input" id="user-input-phone" value="${escapeHTML(user?.phone || '')}" placeholder="0661.56.03.85">
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-role">Rôle d'administration</label>
             <select class="form-select" id="user-input-role" style="width: 100%;">
+              <option value="Gérant" ${user?.role === 'Gérant' ? 'selected' : ''}>Gérant (direction & accès complet)</option>
               <option value="Administrateur" ${user?.role === 'Administrateur' ? 'selected' : ''}>Administrateur (accès complet)</option>
               <option value="Agent commercial" ${user?.role === 'Agent commercial' || !user?.role ? 'selected' : ''}>Agent commercial (biens & demandes)</option>
               <option value="Gestionnaire" ${user?.role === 'Gestionnaire' ? 'selected' : ''}>Gestionnaire de biens</option>
@@ -302,3 +303,4 @@ function closeUserDrawer() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+

@@ -1,43 +1,53 @@
 // client/data/config.js
-// MODULE ES NAVIGATEUR — chargé via <script type="module"> (import / export uniquement)
-// Configuration globale du site : identite, coordonnees, navigation.
-// DONNEES MOCKEES - A SUPPRIMER quand le backend sera pret
+// Configuration globale de l'agence Imolode (carte de visite officielle).
 
 export const CONFIG = Object.freeze({
-  // ---- Chemins ----
-  BASE_URL: '/client',     // préfixe de toutes les pages publiques
-  ASSETS_URL: '/assets',   // racine des assets (css, images, ...)
+  BASE_URL: '/client',
+  ASSETS_URL: '/assets',
 
-  // ---- Identité ----
-  AGENCY_NAME: 'Immolode',
-  TAGLINE: 'Agence immobilière',
+  AGENCY_NAME: 'Imolode',
+  AGENCY_LEGAL: 'Agence Immobilière Agréée Imolode',
+  CARD_TITLE: 'Agence Immobilière Agréée Imolode',
+  MANAGER: 'G. Hocine',
+  MANAGER_ROLE: 'Gérant',
+  TAGLINE: 'Agence immobilière agréée',
   DESCRIPTION:
-    'Immolode, agence immobilière : découvrez des propriétés sélectionnées avec soin pour vos projets d\'achat et de location.',
+    'Imolode, agence immobilière agréée : découvrez des propriétés sélectionnées avec soin pour vos projets d\'achat et de location.',
   THEME_COLOR: '#F8F7F4',
 
-  // ---- Coordonnées ----
-  PHONE: '+213 5XX XX XX XX',
-  PHONE_RAW: '+2135XXXXXXXX',          // version utilisée dans les liens tel:
-  EMAIL: 'contact@immolode.dz',
-  ADDRESS: '12 rue Didouche Mourad, Béjaïa 06000, Algérie',
-  WHATSAPP: '2135XXXXXXXX',            // format international, sans "+" ni espaces
+  PHONE: '0661.56.03.85',
+  PHONE_RAW: '+213661560385',
+  EMAIL: 'gahamhocine2@gmail.com',
+  ADDRESS: '41 Bld Soudani Boudjemaa El Mouradia - Alger',
+  WHATSAPP: '213661560385',
   HOURS: 'Dim – Jeu : 9h00 – 17h30 · Sam : 9h00 – 13h00',
-  SOCIAL: { facebook: '#', instagram: '#', whatsapp: '#' },
+  SOCIAL: {
+    facebook: 'https://facebook.com/imolode.hydra',
+    facebookLabel: 'Imolode Hydra',
+    whatsapp: 'https://wa.me/213661560385'
+  },
+  LEGAL_REGULATION: {
+    title: 'Agence Immobilière Agréée Imolode',
+    article: "Art. 34-(Décret réglementant la profession de l'Agence immobilière)",
+    text: "L'agent immobilier a droit, dans le cadre de l'exercice de sa profession à une rémunération. Pour ce qui concerne l'agence et le courtier immobilier, Lorsque la valeur du bien à vendre équivaut à :",
+    brackets: [
+      { condition: '1.000.000 DA', rate: '3%' },
+      { condition: 'Inférieur ou égal à 5.000.000 DA', rate: '2%' },
+      { condition: 'Supérieur à 5.000.000 DA', rate: '1%' }
+    ],
+    rent: "Lorsqu'il s'agit d'un bien à louer, sa rémunération équivaut à un (1) mois de location par année de location."
+  },
 
-  // ---- Affichage ----
   CURRENCY: 'DA',
   LOCALE: 'fr-FR',
   PROPERTIES_PER_PAGE: 9,
 
-  // ---- Statistiques cles ----
   STATS: [
     { value: '10+', label: "Années d'expérience" },
     { value: '150+', label: 'Biens accompagnés' },
     { value: '500+', label: 'Clients satisfaits' }
   ],
 
-  // ---- Navigation (partagée par header.js et footer.js) ----
-  // "path" est relatif à BASE_URL : utiliser url(path) de helpers.js
   NAV: [
     { key: 'accueil',    label: 'Accueil',    path: '/' },
     { key: 'biens',      label: 'Nos biens',  path: '/biens' },

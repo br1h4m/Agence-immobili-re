@@ -1,5 +1,5 @@
 /* admin/assets/css/admin.css
- * Styles de l'interface d'administration Immolode
+ * Styles de l'interface d'administration Imolode
  * Palette élégante et luxueuse, harmonisée avec le site public
  */
 
@@ -146,6 +146,10 @@ button, input, select, textarea {
   height: 32px;
   border-radius: var(--radius-xs);
   flex-shrink: 0;
+}
+
+.sidebar-brand .brand-logo {
+  filter: invert(1);
 }
 
 .brand-info {
@@ -1343,3 +1347,4 @@ button, input, select, textarea {
     grid-column: span 12;
   }
 }
+

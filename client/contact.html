@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Contact — Immolode</title>
+  <title>Contact — Imolode</title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,12 +27,22 @@
 
     <section class="section">
       <div class="container">
-        <div class="contact-grid">
+        <!-- Carte de visite officielle -->
+        <div id="business-card-slot"></div>
+
+        <div class="contact-grid" style="margin-top:40px">
           <div class="contact-info">
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-user"></span>
+              <div>
+                <p class="contact-info-label">Direction</p>
+                <p class="contact-info-value" id="val-manager"></p>
+              </div>
+            </div>
             <div class="contact-info-item">
               <span class="contact-info-icon" id="ico-phone"></span>
               <div>
-                <p class="contact-info-label">Téléphone</p>
+                <p class="contact-info-label">Mobile</p>
                 <p class="contact-info-value" id="val-phone"></p>
               </div>
             </div>
@@ -51,10 +61,10 @@
               </div>
             </div>
             <div class="contact-info-item">
-              <span class="contact-info-icon" id="ico-clock"></span>
+              <span class="contact-info-icon" id="ico-fb"></span>
               <div>
-                <p class="contact-info-label">Horaires</p>
-                <p class="contact-info-value" id="val-hours"></p>
+                <p class="contact-info-label">Facebook</p>
+                <p class="contact-info-value"><a id="val-fb" target="_blank" rel="noopener"></a></p>
               </div>
             </div>
             <div class="contact-info-item">
@@ -62,6 +72,13 @@
               <div>
                 <p class="contact-info-label">WhatsApp</p>
                 <p class="contact-info-value"><a id="val-wa">Discuter sur WhatsApp</a></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-clock"></span>
+              <div>
+                <p class="contact-info-label">Horaires</p>
+                <p class="contact-info-value" id="val-hours"></p>
               </div>
             </div>
           </div>
@@ -84,21 +101,31 @@
     import { initPage } from '/client/includes/scripts.js';
     import { initForms } from '/assets/js/forms.js';
     import { ContactForm } from '/assets/components/contact-form.js';
+    import { BusinessCard } from '/assets/components/business-card.js';
     import { CONFIG } from '/client/data/config.js';
     import { icon, telLink, whatsappLink, escapeHTML } from '/client/includes/helpers.js';
 
     await initPage({ page: 'contact', title: 'Contact' });
 
+    document.getElementById('business-card-slot').innerHTML = BusinessCard();
+
+    document.getElementById('ico-user').innerHTML = icon('user', { size: 20 });
     document.getElementById('ico-phone').innerHTML = icon('phone', { size: 20 });
     document.getElementById('ico-mail').innerHTML = icon('mail', { size: 20 });
     document.getElementById('ico-pin').innerHTML = icon('pin', { size: 20 });
-    document.getElementById('ico-clock').innerHTML = icon('clock', { size: 20 });
+    document.getElementById('ico-fb').innerHTML = icon('facebook', { size: 20 });
     document.getElementById('ico-wa').innerHTML = icon('whatsapp', { size: 20 });
+    document.getElementById('ico-clock').innerHTML = icon('clock', { size: 20 });
 
+    document.getElementById('val-manager').innerHTML = `<strong>${escapeHTML(CONFIG.MANAGER)}</strong>, ${escapeHTML(CONFIG.MANAGER_ROLE)}`;
     document.getElementById('val-phone').innerHTML = `<a href="${telLink()}">${escapeHTML(CONFIG.PHONE)}</a>`;
     document.getElementById('val-mail').innerHTML = `<a href="mailto:${CONFIG.EMAIL}">${escapeHTML(CONFIG.EMAIL)}</a>`;
     document.getElementById('val-address').textContent = CONFIG.ADDRESS;
     document.getElementById('val-hours').textContent = CONFIG.HOURS;
+
+    const fb = document.getElementById('val-fb');
+    fb.href = CONFIG.SOCIAL.facebook;
+    fb.textContent = CONFIG.SOCIAL.facebookLabel;
 
     const wa = document.getElementById('val-wa');
     wa.href = whatsappLink('Bonjour, je souhaite avoir des informations.');

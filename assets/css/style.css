@@ -191,7 +191,7 @@ label { display: block; }
   backdrop-filter: blur(4px);
 }
 .badge-transaction { background: rgba(28, 28, 28, 0.9); }
-.badge-new { background: var(--color-accent); }
+.badge-new, .badge-status--new { background: var(--color-accent); }
 .badge-status--reserved { background: #B57A2C; }
 .badge-status--sold { background: #6B6B6B; }
 .badge-status--rented { background: #4E5A63; }

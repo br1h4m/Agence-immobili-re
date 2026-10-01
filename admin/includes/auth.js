@@ -6,10 +6,10 @@ const SESSION_KEY = 'immo_admin_session';
 
 const DEFAULT_ADMIN = {
   id: 1,
-  nom: 'Karim Benali',
-  email: 'admin@immolode.dz',
-  role: 'Administrateur',
-  poste: 'Directeur general'
+  nom: 'G. Hocine',
+  email: 'gahamhocine2@gmail.com',
+  role: 'Gérant',
+  poste: 'Gérant'
 };
 
 export function getSession() {
@@ -56,9 +56,11 @@ export function login(email, password) {
 
   // Verifie le compte par defaut ou un mot de passe standard
   if (
-    (cleanEmail === 'admin@immolode.dz' && cleanPass === 'admin123') ||
-    (cleanEmail.endsWith('@immolode.dz') && cleanPass.length >= 4) ||
-    (cleanEmail === 'admin' && cleanPass === 'admin')
+    (cleanEmail === 'gahamhocine2@gmail.com' && cleanPass === 'admin123') ||
+    (cleanEmail === 'admin@imolode.dz' && cleanPass === 'admin123') ||
+    (cleanEmail.endsWith('@imolode.dz') && cleanPass.length >= 4) ||
+    (cleanEmail === 'admin' && cleanPass === 'admin') ||
+    (cleanEmail === 'admin' && cleanPass === 'admin123')
   ) {
     const user = {
       ...DEFAULT_ADMIN,
@@ -75,7 +77,7 @@ export function login(email, password) {
     return { success: true, user };
   }
 
-  return { success: false, message: 'Identifiants incorrects. Utilisez admin@immolode.dz / admin123' };
+  return { success: false, message: 'Identifiants incorrects. Utilisez gahamhocine2@gmail.com / admin123' };
 }
 
 export function logout() {
@@ -84,3 +86,4 @@ export function logout() {
   } catch (_) {}
   window.location.replace('/admin/login');
 }
+

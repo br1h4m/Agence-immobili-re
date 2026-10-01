@@ -1,4 +1,4 @@
-// admin/components/sidebar.js
+﻿// admin/components/sidebar.js
 // MODULE ES NAVIGATEUR — barre laterale de navigation de l'administration.
 
 import { adminIcon, escapeHTML } from '/admin/assets/js/admin.js';
@@ -37,7 +37,7 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
         <a href="/admin/" class="brand-link">
           <img src="/assets/images/logo.svg" alt="" class="brand-logo" width="30" height="30">
           <div class="brand-info">
-            <span class="brand-title">Immolode</span>
+            <span class="brand-title">Imolode</span>
             <span class="brand-tag">Administration</span>
           </div>
         </a>
@@ -74,3 +74,4 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
   `;
 }
+

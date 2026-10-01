@@ -83,7 +83,24 @@ const INITIAL_DEMANDES = [
 function readStorage(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const data = JSON.parse(raw);
+      // Nettoie automatiquement les anciennes données obsolètes (faux noms ou numéros XX)
+      if (key === KEY_USERS && Array.isArray(data)) {
+        const hasOutdatedData = data.some((u) => !u.nom || u.nom.includes('Benali') || String(u.phone).includes('XX'));
+        if (hasOutdatedData) {
+          localStorage.setItem(key, JSON.stringify(fallback));
+          return fallback;
+        }
+      }
+      if (key === KEY_SETTINGS && data) {
+        if (!data.phone || data.phone.includes('34 12') || data.email?.includes('Imolode.dz')) {
+          localStorage.setItem(key, JSON.stringify(fallback));
+          return fallback;
+        }
+      }
+      return data;
+    }
     localStorage.setItem(key, JSON.stringify(fallback));
     return fallback;
   } catch (_) {
@@ -256,7 +273,7 @@ export function getUsers() {
     poste: t.poste,
     email: t.email,
     phone: t.phone,
-    role: t.id === 1 ? 'Administrateur' : 'Agent commercial',
+    role: t.id === 1 ? 'Gérant' : 'Agent commercial',
     actif: true
   }));
   return readStorage(KEY_USERS, defaultUsers);

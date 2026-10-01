@@ -7,6 +7,7 @@ import {
 
 const STATUS_LABELS = {
   'Disponible': null,
+  'Nouveau': { label: 'Nouveau', mod: 'new' },
   'Réservé': { label: 'Réservé', mod: 'reserved' },
   'Vendu': { label: 'Vendu', mod: 'sold' },
   'Loué': { label: 'Loué', mod: 'rented' }
@@ -21,7 +22,7 @@ export function PropertyCard(property) {
     ? `<span class="badge badge-status badge-status--${statusInfo.mod}">${statusInfo.label}</span>`
     : '';
 
-  const newBadge = property.isNew
+  const newBadge = (property.isNew && property.status !== 'Nouveau')
     ? `<span class="badge badge-new">Nouveau</span>`
     : '';
 

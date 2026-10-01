@@ -1,4 +1,4 @@
-// admin/demandes.js
+﻿// admin/demandes.js
 // MODULE ES NAVIGATEUR — gestion et suivi des demandes de contact et d'estimations.
 
 import {
@@ -342,7 +342,7 @@ function openDrawer(id) {
           </a>
         ` : ''}
         ${demande.email ? `
-          <a href="mailto:${escapeHTML(demande.email)}?subject=Re: ${encodeURIComponent(demande.subject || 'Votre demande sur Immolode')}" class="btn btn-primary btn-sm">
+          <a href="mailto:${escapeHTML(demande.email)}?subject=Re: ${encodeURIComponent(demande.subject || 'Votre demande sur Imolode')}" class="btn btn-primary btn-sm">
             ${adminIcon('mail', { size: 14 })} Répondre
           </a>
         ` : ''}
@@ -386,3 +386,4 @@ function closeDrawer() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+

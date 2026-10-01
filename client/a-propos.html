@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>À propos — Immolode</title>
+  <title>À propos — Imolode</title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
             <span class="section-eyebrow">Notre histoire</span>
             <h2 class="section-title" style="margin-top:8px">Une agence fondée sur le terrain</h2>
             <p class="text-muted">
-              Immolode est née de la conviction qu'une transaction immobilière réussie repose avant
+              Imolode est née de la conviction qu'une transaction immobilière réussie repose avant
               tout sur la confiance. Depuis nos débuts, nous avons construit une méthode simple :
               visiter chaque bien, écouter chaque projet, et ne proposer que ce qui correspond
               réellement aux attentes.
@@ -70,7 +70,7 @@
               </li>
               <li class="timeline-item">
                 <span class="timeline-year">2024</span>
-                <p class="text-muted">Plus de 150 biens accompagnés et une équipe de 8 conseillers.</p>
+                <p class="text-muted">Plus de 150 biens accompagnés et une présence confirmée sur le marché immobilier algérois.</p>
               </li>
             </ul>
           </div>
@@ -84,11 +84,13 @@
     <section class="section">
       <div class="container">
         <header class="section-head section-head--center">
-          <span class="section-eyebrow">Notre équipe</span>
-          <h2 class="section-title">Des conseillers disponibles</h2>
-          <p class="section-lead">Chaque projet est suivi par un interlocuteur unique.</p>
+          <span class="section-eyebrow">Direction de l'agence</span>
+          <h2 class="section-title">Votre interlocuteur</h2>
+          <p class="section-lead">Un accompagnement rigoureux et transparent pour tous vos projets.</p>
         </header>
-        <div id="team-grid" class="property-grid"></div>
+        <div id="team-grid" style="max-width:380px;margin:0 auto 48px"></div>
+
+        <div id="business-card-slot"></div>
       </div>
     </section>
 
@@ -115,12 +117,14 @@
   <script type="module">
     import { initPage } from '/client/includes/scripts.js';
     import { TeamCard } from '/assets/components/team-card.js';
+    import { BusinessCard } from '/assets/components/business-card.js';
     import { CTASection } from '/assets/components/cta-section.js';
     import { TEAM } from '/client/data/team.js';
 
     await initPage({ page: 'a-propos', title: 'À propos' });
 
     document.getElementById('team-grid').innerHTML = TEAM.map(TeamCard).join('');
+    document.getElementById('business-card-slot').innerHTML = BusinessCard();
     document.getElementById('cta-slot').innerHTML = CTASection();
   </script>
 </body>
