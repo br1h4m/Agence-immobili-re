@@ -1246,6 +1246,34 @@
         sigSlot.innerHTML = '<span>Signature électronique validée</span>';
       }
 
+      // Enregistrement persistant dans le store local pour l'espace administration
+      try {
+        const stored = JSON.parse(localStorage.getItem('immo_fiches_client') || '[]');
+        stored.unshift({
+          id: Date.now(),
+          reference: dossierRef,
+          nom: nomInput.value.trim(),
+          prenom: prenomInput.value.trim(),
+          telephone: telInput.value.trim(),
+          email: emailInput.value.trim(),
+          transaction: checkedTransaction.value,
+          typeBien: checkedBien.value,
+          pieceIdentite: {
+            name: currentFile.name,
+            size: currentFile.size,
+            type: currentFile.type,
+            dataUrl: currentFileDataUrl
+          },
+          signature: signatureDataUrl,
+          engagementAccepte: true,
+          status: 'Nouveau',
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('immo_fiches_client', JSON.stringify(stored));
+      } catch (err) {
+        console.warn('Erreur stockage local fiche client:', err);
+      }
+
       // Basculer l'affichage vers la confirmation
       form.style.display = 'none';
       successCard.hidden = false;

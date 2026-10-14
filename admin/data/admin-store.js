@@ -8,8 +8,72 @@ import { CONFIG } from '/client/data/config.js';
 
 const KEY_PROPERTIES = 'immo_properties';
 const KEY_DEMANDES = 'immo_demandes';
+const KEY_FICHES_CLIENT = 'immo_fiches_client';
 const KEY_USERS = 'immo_users';
 const KEY_SETTINGS = 'immo_settings';
+
+const INITIAL_FICHES_CLIENT = [
+  {
+    id: 1727720001,
+    reference: 'IML-DOS-2026-1042',
+    nom: 'Benali',
+    prenom: 'Karim',
+    telephone: '0550 12 34 56',
+    email: 'karim.benali@gmail.com',
+    transaction: 'Demande',
+    typeBien: 'Appartement',
+    pieceIdentite: {
+      name: 'cni_karim_benali.pdf',
+      size: 450000,
+      type: 'application/pdf',
+      dataUrl: null
+    },
+    signature: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M 20 50 Q 60 10 90 40 T 170 30" fill="none" stroke="%231C1C1C" stroke-width="2.5"/></svg>',
+    engagementAccepte: true,
+    status: 'Nouveau',
+    createdAt: '2026-10-14T09:30:00Z'
+  },
+  {
+    id: 1727720002,
+    reference: 'IML-DOS-2026-1043',
+    nom: 'Amrani',
+    prenom: 'Samira',
+    telephone: '0661 88 99 22',
+    email: 'samira.amrani@outlook.com',
+    transaction: 'Offre',
+    typeBien: 'Villa',
+    pieceIdentite: {
+      name: 'passeport_amrani.jpg',
+      size: 1250000,
+      type: 'image/jpeg',
+      dataUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80'
+    },
+    signature: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M 30 45 Q 70 20 110 50 T 165 40" fill="none" stroke="%231C1C1C" stroke-width="2.5"/></svg>',
+    engagementAccepte: true,
+    status: 'En cours',
+    createdAt: '2026-10-13T15:20:00Z'
+  },
+  {
+    id: 1727720003,
+    reference: 'IML-DOS-2026-1044',
+    nom: 'Meziani',
+    prenom: 'Sofiane',
+    telephone: '0770 45 67 89',
+    email: 'sofiane.meziani@yahoo.fr',
+    transaction: 'Demande',
+    typeBien: 'Commerce',
+    pieceIdentite: {
+      name: 'registre_commerce_cni.pdf',
+      size: 820000,
+      type: 'application/pdf',
+      dataUrl: null
+    },
+    signature: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M 25 55 Q 80 15 120 45 T 175 35" fill="none" stroke="%231C1C1C" stroke-width="2.5"/></svg>',
+    engagementAccepte: true,
+    status: 'Validé',
+    createdAt: '2026-10-12T11:10:00Z'
+  }
+];
 
 const INITIAL_DEMANDES = [
   {
@@ -263,6 +327,87 @@ export function deleteDemande(id) {
 }
 
 /* ==========================================================================
+   Fiches Client (Dossiers)
+   ========================================================================== */
+
+export function getFichesClient({ search = '', transaction = '', typeBien = '', status = '' } = {}) {
+  let list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+
+  if (transaction) {
+    list = list.filter((f) => f.transaction === transaction);
+  }
+  if (typeBien) {
+    list = list.filter((f) => f.typeBien === typeBien);
+  }
+  if (status) {
+    list = list.filter((f) => f.status === status);
+  }
+  if (search) {
+    const q = search.toLowerCase().trim();
+    list = list.filter((f) =>
+      (f.reference || '').toLowerCase().includes(q) ||
+      (f.nom || '').toLowerCase().includes(q) ||
+      (f.prenom || '').toLowerCase().includes(q) ||
+      `${f.nom || ''} ${f.prenom || ''}`.toLowerCase().includes(q) ||
+      (f.email || '').toLowerCase().includes(q) ||
+      (f.telephone || '').toLowerCase().includes(q)
+    );
+  }
+
+  return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+export function getFicheClientById(id) {
+  const list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  return list.find((f) => String(f.id) === String(id)) || null;
+}
+
+export function saveFicheClient(data) {
+  const list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  let updated;
+
+  if (data.id) {
+    const index = list.findIndex((f) => String(f.id) === String(data.id));
+    if (index !== -1) {
+      updated = { ...list[index], ...data, updatedAt: new Date().toISOString() };
+      list[index] = updated;
+    } else {
+      updated = { ...data, updatedAt: new Date().toISOString() };
+      list.unshift(updated);
+    }
+  } else {
+    updated = {
+      ...data,
+      id: Date.now(),
+      status: data.status || 'Nouveau',
+      createdAt: data.createdAt || new Date().toISOString()
+    };
+    list.unshift(updated);
+  }
+
+  writeStorage(KEY_FICHES_CLIENT, list);
+  return updated;
+}
+
+export function updateFicheClientStatus(id, newStatus) {
+  const list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const item = list.find((f) => String(f.id) === String(id));
+  if (item) {
+    item.status = newStatus;
+    writeStorage(KEY_FICHES_CLIENT, list);
+    return true;
+  }
+  return false;
+}
+
+export function deleteFicheClient(id) {
+  const list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const filtered = list.filter((f) => String(f.id) !== String(id));
+  writeStorage(KEY_FICHES_CLIENT, filtered);
+  return filtered.length !== list.length;
+}
+
+/* ==========================================================================
    Utilisateurs / Equipe
    ========================================================================== */
 
@@ -345,6 +490,7 @@ export function saveSettings(data) {
 export function getDashboardStats() {
   const properties = readStorage(KEY_PROPERTIES, PROPERTIES);
   const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const fichesClient = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
 
   const totalProperties = properties.length;
   const forSale = properties.filter((p) => p.transaction === 'Acheter').length;
@@ -354,11 +500,18 @@ export function getDashboardStats() {
   const totalDemandes = demandes.length;
   const pendingDemandes = demandes.filter((d) => d.status === 'Nouveau' || d.status === 'En cours').length;
 
+  const totalFichesClient = fichesClient.length;
+  const pendingFichesClient = fichesClient.filter((f) => f.status === 'Nouveau' || f.status === 'En cours').length;
+
   const recentProperties = [...properties]
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     .slice(0, 5);
 
   const recentDemandes = [...demandes]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+
+  const recentFichesClient = [...fichesClient]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
 
@@ -369,7 +522,10 @@ export function getDashboardStats() {
     available,
     totalDemandes,
     pendingDemandes,
+    totalFichesClient,
+    pendingFichesClient,
     recentProperties,
-    recentDemandes
+    recentDemandes,
+    recentFichesClient
   };
 }

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiches client — Administration Imolode</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/admin/assets/css/admin.css">
+  <style>
+    /* Styles spécifiques pour la gestion des fiches client */
+    .fiche-signature-preview {
+      display: inline-block;
+      max-height: 38px;
+      max-width: 110px;
+      background: #FFFFFF;
+      border: 1px solid var(--admin-border);
+      border-radius: var(--radius-xs);
+      padding: 2px 4px;
+      vertical-align: middle;
+    }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      background: var(--admin-surface-alt);
+      border: 1px solid var(--admin-border);
+      border-radius: var(--radius-xs);
+      color: var(--admin-text);
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .drawer-signature-box {
+      background: #FFFFFF;
+      border: 1px solid var(--admin-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .drawer-signature-img {
+      max-height: 120px;
+      max-width: 100%;
+      display: inline-block;
+      object-fit: contain;
+    }
+
+    .drawer-doc-box {
+      border: 1px solid var(--admin-border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      background: var(--admin-surface-alt);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .drawer-doc-img {
+      max-width: 100%;
+      max-height: 240px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--admin-border);
+      object-fit: cover;
+      margin-top: 10px;
+      display: block;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #fiche-drawer, #fiche-drawer * {
+        visibility: visible;
+      }
+      #fiche-drawer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        box-shadow: none;
+        border: none;
+        transform: none !important;
+      }
+      .drawer-footer, #btn-close-drawer {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-layout">
+    <div id="sidebar-slot"></div>
+
+    <div class="admin-main-wrap">
+      <div id="topbar-slot"></div>
+
+      <main class="admin-content" id="fiches-content">
+        <div style="padding: 40px; text-align: center; color: var(--admin-text-muted);">
+          Chargement des fiches client...
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Volet latéral de consultation détaillée d'une fiche client -->
+  <div class="admin-drawer" id="fiche-drawer" aria-hidden="true"></div>
+  <div class="sidebar-backdrop" id="drawer-backdrop"></div>
+
+  <script type="module" src="/admin/fiches-client.js"></script>
+</body>
+</html>

@@ -26,6 +26,7 @@
     { "source": "/client", "destination": "/client/index.html" },
     { "source": "/client/bien/:id", "destination": "/client/bien.html" },
     { "source": "/client/fiche-client", "destination": "/client/fiche-client.html" },
-    { "source": "/fiche-client", "destination": "/client/fiche-client.html" }
+    { "source": "/fiche-client", "destination": "/client/fiche-client.html" },
+    { "source": "/admin/fiches-client", "destination": "/admin/fiches-client.html" }
   ]
 }

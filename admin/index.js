@@ -20,7 +20,7 @@ async function renderDashboard() {
   if (!root) return;
 
   // Calcul KPI
-  const { totalProperties, forSale, forRent, available, totalDemandes, pendingDemandes, recentProperties, recentDemandes } = stats;
+  const { totalProperties, forSale, forRent, available, totalDemandes, pendingDemandes, totalFichesClient = 0, pendingFichesClient = 0, recentProperties, recentDemandes, recentFichesClient = [] } = stats;
 
   root.innerHTML = `
     <!-- Statistiques KPI -->
@@ -64,6 +64,16 @@ async function renderDashboard() {
           <p class="stat-label">Demandes en attente (Total: ${totalDemandes})</p>
         </div>
       </div>
+
+      <div class="stat-card">
+        <div class="stat-icon ${pendingFichesClient > 0 ? 'stat-icon--gold' : 'stat-icon--blue'}">
+          ${adminIcon('file-text', { size: 24 })}
+        </div>
+        <div class="stat-info">
+          <p class="stat-value">${totalFichesClient}</p>
+          <p class="stat-label">Fiches client enregistrées (${pendingFichesClient} en cours)</p>
+        </div>
+      </div>
     </div>
 
     <!-- Actions rapides -->
@@ -71,6 +81,10 @@ async function renderDashboard() {
       <a href="/admin/bien-edit" class="btn btn-primary">
         ${adminIcon('plus', { size: 16 })}
         <span>Publier un nouveau bien</span>
+      </a>
+      <a href="/admin/fiches-client" class="btn btn-outline" style="border-color: var(--admin-gold); color: var(--admin-gold);">
+        ${adminIcon('file-text', { size: 16 })}
+        <span>Consulter les fiches client ${pendingFichesClient > 0 ? `<span class="sidebar-badge" style="margin-left: 4px;">${pendingFichesClient}</span>` : ''}</span>
       </a>
       <a href="/admin/demandes" class="btn btn-outline">
         ${adminIcon('mail', { size: 16 })}
@@ -219,6 +233,69 @@ async function renderDashboard() {
         </div>
       </div>
 
+    </div>
+
+    <!-- Derniers dossiers Fiches client -->
+    <div class="card" style="margin-top: 24px;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Dossiers Fiches Client récents</h2>
+          <p class="card-subtitle">Constitutions de dossiers officiels avec pièces d'identité et signatures électroniques</p>
+        </div>
+        <a href="/admin/fiches-client" class="btn btn-outline btn-sm">Voir toutes les fiches</a>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        ${recentFichesClient.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-state-icon">${adminIcon('file-text', { size: 24 })}</div>
+            <p class="empty-state-title">Aucune fiche client enregistrée</p>
+            <p class="empty-state-text">Les dossiers soumis depuis la page publique apparaîtront ici.</p>
+          </div>
+        ` : `
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Date & Réf</th>
+                  <th>Client</th>
+                  <th>Opération</th>
+                  <th>Type de bien</th>
+                  <th>Statut</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recentFichesClient.map((f) => `
+                  <tr>
+                    <td>
+                      <div style="font-weight: 600; color: var(--admin-text); font-size: 0.85rem;">${formatDate(f.createdAt)}</div>
+                      <span style="font-size: 0.76rem; font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(f.reference || '')}</span>
+                    </td>
+                    <td>
+                      <div style="font-weight: 600; color: var(--admin-text);">${escapeHTML(f.nom || '')} ${escapeHTML(f.prenom || '')}</div>
+                      <div style="font-size: 0.78rem; color: var(--admin-text-muted);">${escapeHTML(f.telephone || '')} · ${escapeHTML(f.email || '')}</div>
+                    </td>
+                    <td>
+                      <span class="badge ${f.transaction === 'Offre' ? 'badge--sale' : 'badge--info'}">${escapeHTML(f.transaction || 'Demande')}</span>
+                    </td>
+                    <td style="font-weight: 500;">
+                      ${escapeHTML(f.typeBien || '—')}
+                    </td>
+                    <td>
+                      ${statusBadge(f.status || 'Nouveau')}
+                    </td>
+                    <td style="text-align: right;">
+                      <a href="/admin/fiches-client?id=${f.id}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">
+                        ${adminIcon('eye', { size: 14 })} Consulter
+                      </a>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
     </div>
   `;
 }

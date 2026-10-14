@@ -1,4 +1,4 @@
-﻿// admin/components/sidebar.js
+// admin/components/sidebar.js
 // MODULE ES NAVIGATEUR — barre laterale de navigation de l'administration.
 
 import { adminIcon, escapeHTML } from '/admin/assets/js/admin.js';
@@ -9,11 +9,13 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
   const user = getCurrentUser() || { nom: 'Administrateur', role: 'Admin' };
   const stats = getDashboardStats();
   const pendingCount = stats.pendingDemandes || 0;
+  const pendingFiches = stats.pendingFichesClient || 0;
 
   const items = [
     { key: 'dashboard', label: 'Tableau de bord', href: '/admin/', icon: 'dashboard' },
     { key: 'biens', label: 'Biens immobiliers', href: '/admin/biens', icon: 'building' },
     { key: 'demandes', label: 'Demandes', href: '/admin/demandes', icon: 'mail', badge: pendingCount > 0 ? pendingCount : null },
+    { key: 'fiches-client', label: 'Fiches client', href: '/admin/fiches-client', icon: 'file-text', badge: pendingFiches > 0 ? pendingFiches : null },
     { key: 'utilisateurs', label: 'Utilisateurs', href: '/admin/utilisateurs', icon: 'users' },
     { key: 'parametres', label: 'Paramètres', href: '/admin/parametres', icon: 'settings' }
   ];

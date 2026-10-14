@@ -1,4 +1,4 @@
-﻿// admin/demandes.js
+// admin/demandes.js
 // MODULE ES NAVIGATEUR — gestion et suivi des demandes de contact et d'estimations.
 
 import {
@@ -30,6 +30,17 @@ async function init() {
   if (!root) return;
 
   root.innerHTML = `
+    <!-- Encart d'accès direct aux Fiches client -->
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: rgba(181, 154, 106, 0.08); border-left: 3px solid var(--admin-gold); border-radius: var(--radius-xs); margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+      <div style="font-size: 0.88rem; color: var(--admin-text);">
+        <strong>Dossiers officiels :</strong> Vous recherchez les fiches clients avec signatures électroniques et justificatifs d'identité ?
+      </div>
+      <a href="/admin/fiches-client" class="btn btn-primary btn-sm" style="flex-shrink: 0;">
+        ${adminIcon('file-text', { size: 14 })}
+        <span>Consulter les fiches client</span>
+      </a>
+    </div>
+
     <!-- Barre de filtres et recherche -->
     <div class="filters-bar">
       <div class="search-input-wrap">
