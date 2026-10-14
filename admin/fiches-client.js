@@ -311,6 +311,21 @@ function renderResults() {
 }
 
 function bindTableEvents(container) {
+  // Clic sur une ligne du tableau pour ouvrir le tiroir
+  container.querySelectorAll('.admin-table tbody tr').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      if (
+        e.target.closest('button') ||
+        e.target.closest('a') ||
+        e.target.closest('select') ||
+        e.target.closest('input')
+      ) {
+        return;
+      }
+      openDrawer(tr.dataset.id);
+    });
+  });
+
   // Changement rapide de statut
   container.querySelectorAll('.select-status-quick').forEach((sel) => {
     sel.addEventListener('change', (e) => {
@@ -422,35 +437,50 @@ function openDrawer(id) {
         </div>
       </div>
 
-      <!-- Pièce d'identité jointe -->
+      <!-- Pièce d'identité jointe avec inspection haute résolution -->
       <div style="margin-bottom: 24px;">
         <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
-          ${adminIcon('file-text', { size: 16 })} Justificatif d'identité
+          ${adminIcon('file-text', { size: 16 })} Justificatif d'identité (CNI, Permis, Passeport)
         </h4>
         ${doc.name ? `
-          <div class="drawer-doc-box">
-            <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-              ${adminIcon('file-text', { size: 22, className: 'text-gold' })}
-              <div style="min-width: 0;">
-                <p style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--admin-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                  ${escapeHTML(doc.name)}
-                </p>
-                <p style="margin: 2px 0 0; font-size: 0.78rem; color: var(--admin-text-muted);">
-                  ${doc.size ? `${(doc.size / 1024).toFixed(1)} Ko` : 'Fichier vérifié'}
-                </p>
+          <div class="doc-inspect-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                ${adminIcon('file-text', { size: 22, className: 'text-gold' })}
+                <div style="min-width: 0;">
+                  <p style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--admin-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHTML(doc.name)}
+                  </p>
+                  <p style="margin: 2px 0 0; font-size: 0.78rem; color: var(--admin-text-muted);">
+                    ${doc.size ? `${(doc.size / 1024).toFixed(1)} Ko` : 'Fichier vérifié'}
+                  </p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                ${isImageDoc ? `
+                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Pièce d'identité — ${escapeHTML(fiche.nom || '')} ${escapeHTML(fiche.prenom || '')}">
+                    ${adminIcon('eye', { size: 14 })} Inspecter en grand
+                  </button>
+                ` : (doc.dataUrl ? `
+                  <a href="${escapeHTML(doc.dataUrl)}" target="_blank" rel="noopener" download="${escapeHTML(doc.name)}" class="btn btn-outline btn-sm">
+                    ${adminIcon('download', { size: 14 })} Télécharger le PDF
+                  </a>
+                ` : `
+                  <span class="badge badge--success">${adminIcon('check', { size: 12 })} Certifié</span>
+                `)}
               </div>
             </div>
-            ${doc.dataUrl ? `
-              <a href="${escapeHTML(doc.dataUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
-                ${adminIcon('eye', { size: 14 })} Ouvrir
-              </a>
-            ` : `
-              <span class="badge badge--success">${adminIcon('check', { size: 12 })} Certifié</span>
-            `}
+
+            ${isImageDoc ? `
+              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Pièce d'identité — ${escapeHTML(fiche.nom || '')} ${escapeHTML(fiche.prenom || '')}" title="Cliquez pour zoomer en plein écran">
+                <img src="${escapeHTML(doc.dataUrl)}" alt="Pièce d'identité" class="doc-inspect-img">
+                <div class="doc-inspect-overlay">
+                  ${adminIcon('search', { size: 18 })}
+                  <span>Cliquer pour inspecter en plein écran</span>
+                </div>
+              </div>
+            ` : ''}
           </div>
-          ${isImageDoc ? `
-            <img src="${escapeHTML(doc.dataUrl)}" alt="Pièce d'identité" class="drawer-doc-img">
-          ` : ''}
         ` : `
           <p style="font-size: 0.88rem; color: var(--admin-text-muted);">Aucune pièce d'identité enregistrée.</p>
         `}
@@ -532,6 +562,52 @@ function openDrawer(id) {
       renderResults();
     }
   });
+
+  // Écouteurs pour agrandir la pièce d'identité en Lightbox
+  drawer.querySelectorAll('.btn-zoom-doc').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const img = btn.dataset.img;
+      const caption = btn.dataset.caption;
+      if (img) openLightbox(img, caption);
+    });
+  });
+}
+
+function openLightbox(imgUrl, captionText) {
+  const lightbox = document.getElementById('image-lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  const lbClose = document.getElementById('lightbox-close');
+
+  if (!lightbox || !lbImg) return;
+
+  lbImg.src = imgUrl;
+  if (lbCaption) {
+    lbCaption.innerHTML = `
+      <span>${escapeHTML(captionText || "Pièce d'identité officielle")}</span>
+      <a href="${escapeHTML(imgUrl)}" download class="btn btn-outline btn-sm" style="color:#FFF; border-color:rgba(255,255,255,0.4);">
+        ${adminIcon('download', { size: 14 })} Télécharger
+      </a>
+    `;
+  }
+
+  lightbox.hidden = false;
+
+  const closeLb = () => {
+    lightbox.hidden = true;
+    lbImg.src = '';
+  };
+
+  lbClose.onclick = closeLb;
+  lightbox.onclick = (e) => {
+    if (e.target === lightbox || e.target === lbClose) {
+      closeLb();
+    }
+  };
+  window.onkeydown = (e) => {
+    if (e.key === 'Escape') closeLb();
+  };
 }
 
 function closeDrawer() {

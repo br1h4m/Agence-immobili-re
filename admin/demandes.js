@@ -51,15 +51,18 @@ async function init() {
       <div class="filters-group">
         <select class="form-select" id="filter-type">
           <option value="">Tous les types</option>
-          <option value="Contact">Contact direct</option>
-          <option value="Estimation">Demande d'estimation</option>
+          <option value="Fiche client">Fiches client (avec CNI & Signature)</option>
+          <option value="Estimation">Demandes d'estimation</option>
+          <option value="Contact">Messages de contact</option>
         </select>
 
         <select class="form-select" id="filter-status">
           <option value="">Tous les statuts</option>
           <option value="Nouveau">Nouveau</option>
           <option value="En cours">En cours</option>
+          <option value="Validé">Validé</option>
           <option value="Traite">Traité</option>
+          <option value="Rejeté">Rejeté</option>
         </select>
 
         <button type="button" class="btn btn-outline btn-sm" id="btn-reset-filters" title="Réinitialiser les filtres">
@@ -136,21 +139,42 @@ function renderResults() {
 
   const rows = list.map((item) => {
     const isEstimation = item.type === 'Estimation';
-    const typeBadge = isEstimation
-      ? `<span class="badge badge--sale">${adminIcon('building', { size: 12 })} Estimation</span>`
-      : `<span class="badge badge--info">${adminIcon('mail', { size: 12 })} Contact</span>`;
+    const isFicheClient = item.type === 'Fiche client';
+
+    let typeBadge = '';
+    if (isFicheClient) {
+      const isOffre = item.transaction === 'Offre';
+      typeBadge = `<span class="badge ${isOffre ? 'badge--sale' : 'badge--info'}">${adminIcon('file-text', { size: 12 })} Dossier client (${escapeHTML(item.transaction || 'Demande')})</span>`;
+    } else if (isEstimation) {
+      typeBadge = `<span class="badge badge--sale">${adminIcon('building', { size: 12 })} Estimation</span>`;
+    } else {
+      typeBadge = `<span class="badge badge--info">${adminIcon('mail', { size: 12 })} Contact</span>`;
+    }
+
+    const hasDoc = Boolean(item.pieceIdentite?.name);
+    const hasSig = Boolean(item.signature);
+    const docTags = [];
+    if (hasDoc) {
+      docTags.push(`<span class="doc-badge" title="Pièce d'identité : ${escapeHTML(item.pieceIdentite.name)}">${adminIcon('file-text', { size: 11 })} CNI / Justificatif</span>`);
+    }
+    if (hasSig) {
+      docTags.push(`<span class="badge badge--success" style="font-size: 0.7rem; padding: 2px 6px;">${adminIcon('check', { size: 10 })} Signé</span>`);
+    }
 
     return `
-      <tr data-id="${item.id}">
+      <tr data-id="${item.id}" title="Cliquez pour consulter le dossier complet">
         <td>
           <div style="font-weight: 600; color: var(--admin-text); font-size: 0.85rem;">
             ${formatDate(item.createdAt)}
           </div>
           <div style="font-size: 0.75rem; color: var(--admin-text-subtle);">
-            ${item.createdAt ? new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''}
+            ${item.reference ? `<span style="font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(item.reference)}</span>` : (item.createdAt ? new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '')}
           </div>
         </td>
-        <td>${typeBadge}</td>
+        <td>
+          ${typeBadge}
+          ${docTags.length ? `<div style="display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap;">${docTags.join('')}</div>` : ''}
+        </td>
         <td>
           <div style="font-weight: 600; color: var(--admin-text);">${escapeHTML(item.nom || 'Anonyme')}</div>
           <div style="font-size: 0.78rem; color: var(--admin-text-muted); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
@@ -170,12 +194,14 @@ function renderResults() {
           <select class="form-select select-status-quick" data-id="${item.id}" style="padding: 4px 8px; font-size: 0.8rem; border-radius: var(--radius-xs);">
             <option value="Nouveau" ${item.status === 'Nouveau' ? 'selected' : ''}>Nouveau</option>
             <option value="En cours" ${item.status === 'En cours' ? 'selected' : ''}>En cours</option>
+            <option value="Validé" ${item.status === 'Validé' ? 'selected' : ''}>Validé</option>
             <option value="Traite" ${item.status === 'Traite' ? 'selected' : ''}>Traité</option>
+            <option value="Rejeté" ${item.status === 'Rejeté' ? 'selected' : ''}>Rejeté</option>
           </select>
         </td>
         <td>
           <div class="table-actions">
-            <button type="button" class="btn-icon btn-view-demande" data-id="${item.id}" title="Consulter la demande" aria-label="Voir les détails">
+            <button type="button" class="btn-icon btn-view-demande" data-id="${item.id}" title="Consulter la demande en détail" aria-label="Voir les détails">
               ${adminIcon('eye', { size: 16 })}
             </button>
             <button type="button" class="btn-icon btn-icon--danger btn-delete-demande" data-id="${item.id}" title="Supprimer la demande" aria-label="Supprimer">
@@ -190,14 +216,14 @@ function renderResults() {
   container.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <h2 class="card-title">Demandes enregistrées (${list.length})</h2>
+        <h2 class="card-title">Demandes & Dossiers enregistrés (${list.length})</h2>
       </div>
       <div class="table-responsive">
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Type</th>
+              <th>Date & Réf</th>
+              <th>Type de demande</th>
               <th>Client</th>
               <th>Sujet & Message</th>
               <th>Statut</th>
@@ -216,6 +242,16 @@ function renderResults() {
 }
 
 function bindTableEvents(container) {
+  // Ligne de tableau cliquable
+  container.querySelectorAll('tbody tr').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a')) {
+        return;
+      }
+      openDrawer(tr.dataset.id);
+    });
+  });
+
   // Changement rapide de statut
   container.querySelectorAll('.select-status-quick').forEach((sel) => {
     sel.addEventListener('change', (e) => {
@@ -267,7 +303,10 @@ function openDrawer(id) {
   if (!drawer) return;
 
   const isEstimation = demande.type === 'Estimation';
+  const isFicheClient = demande.type === 'Fiche client' || demande.isFicheClient;
   const d = demande.details || {};
+  const doc = demande.pieceIdentite || {};
+  const isImageDoc = doc.dataUrl && !doc.name?.toLowerCase().endsWith('.pdf');
 
   let detailsBlock = '';
   if (isEstimation) {
@@ -286,6 +325,93 @@ function openDrawer(id) {
           <div><span style="color: var(--admin-text-muted);">Chambres :</span> <strong>${escapeHTML(d.bedrooms || '—')}</strong></div>
           <div><span style="color: var(--admin-text-muted);">Salles de bain :</span> <strong>${escapeHTML(d.bathrooms || '—')}</strong></div>
           <div><span style="color: var(--admin-text-muted);">Garage / Parking :</span> <strong>${escapeHTML(d.garage || '—')}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  let ficheClientBlock = '';
+  if (isFicheClient) {
+    ficheClientBlock = `
+      <!-- Nature de l'opération -->
+      <div style="margin-bottom: 24px; padding: 18px; background-color: var(--admin-surface-alt); border: 1px solid var(--admin-border); border-radius: var(--radius-sm);">
+        <h4 style="margin: 0 0 14px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('building', { size: 16 })} Détails de la constitution de dossier
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 0.88rem;">
+          <div><span style="color: var(--admin-text-muted);">Opération :</span> <strong>${escapeHTML(demande.transaction || 'Demande')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Type de bien :</span> <strong>${escapeHTML(demande.typeBien || 'Appartement')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Référence :</span> <strong>${escapeHTML(demande.reference || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Date :</span> <strong>${formatDate(demande.createdAt)}</strong></div>
+        </div>
+      </div>
+
+      <!-- Pièce d'identité avec fonction inspection / zoom -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('file-text', { size: 16 })} Justificatif d'identité (CNI, Permis, Passeport)
+        </h4>
+
+        ${doc.name ? `
+          <div class="doc-inspect-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                ${adminIcon('file-text', { size: 22, className: 'text-gold' })}
+                <div>
+                  <p style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--admin-text);">${escapeHTML(doc.name)}</p>
+                  <p style="margin: 2px 0 0; font-size: 0.78rem; color: var(--admin-text-muted);">
+                    ${doc.size ? `${(doc.size / 1024).toFixed(1)} Ko` : 'Document vérifié'}
+                  </p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                ${isImageDoc ? `
+                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}">
+                    ${adminIcon('eye', { size: 14 })} Inspecter en grand
+                  </button>
+                ` : (doc.dataUrl ? `
+                  <a href="${escapeHTML(doc.dataUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+                    ${adminIcon('download', { size: 14 })} Télécharger le PDF
+                  </a>
+                ` : `
+                  <span class="badge badge--success">${adminIcon('check', { size: 12 })} Certifié</span>
+                `)}
+              </div>
+            </div>
+
+            ${isImageDoc ? `
+              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}" title="Cliquez pour zoomer en plein écran">
+                <img src="${escapeHTML(doc.dataUrl)}" alt="Pièce d'identité" class="doc-inspect-img">
+                <div class="doc-inspect-overlay">
+                  ${adminIcon('search', { size: 18 })}
+                  <span>Cliquer pour inspecter en plein écran</span>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        ` : `
+          <p style="font-size: 0.88rem; color: var(--admin-text-muted);">Aucune pièce d'identité jointe.</p>
+        `}
+      </div>
+
+      <!-- Signature électronique -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('check', { size: 16 })} Engagement officiel & Signature électronique
+        </h4>
+        <div style="padding: 12px 14px; background-color: rgba(181, 154, 106, 0.08); border-left: 3px solid var(--admin-gold); border-radius: var(--radius-xs); font-size: 0.84rem; line-height: 1.5; color: var(--admin-text); margin-bottom: 10px;">
+          « Ceci constitue un engagement officiel. En cas de transaction, le client est tenu d'honorer les frais de l'agence conformément aux dispositions réglementaires en vigueur. »
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid var(--admin-border); border-radius: var(--radius-sm); padding: 16px; text-align: center;">
+          ${demande.signature ? `
+            <img src="${escapeHTML(demande.signature)}" alt="Signature électronique du client" style="max-height: 110px; max-width: 100%; display: inline-block; object-fit: contain;">
+            <p style="margin: 8px 0 0; font-size: 0.75rem; color: var(--admin-text-muted);">
+              Signature électronique manuscrite certifiée — Recueillie le ${formatDateTime(demande.createdAt)}
+            </p>
+          ` : `
+            <p style="margin: 0; font-size: 0.85rem; color: var(--admin-text-muted);">Signature non enregistrée.</p>
+          `}
         </div>
       </div>
     `;
@@ -314,7 +440,7 @@ function openDrawer(id) {
           <h4 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--admin-text);">${escapeHTML(demande.nom || 'Anonyme')}</h4>
           <div style="display: flex; gap: 12px; margin-top: 4px; font-size: 0.84rem; flex-wrap: wrap;">
             ${demande.email ? `<a href="mailto:${escapeHTML(demande.email)}" style="color: var(--admin-gold); font-weight: 500;">✉ ${escapeHTML(demande.email)}</a>` : ''}
-            ${demande.phone ? `<a href="tel:${escapeHTML(demande.phone)}" style="color: var(--admin-text-muted); font-weight: 500;">📞 ${escapeHTML(demande.phone)}</a>` : ''}
+            ${demande.phone ? `<span>•</span><a href="tel:${escapeHTML(demande.phone)}" style="color: var(--admin-text-muted); font-weight: 500;">📞 ${escapeHTML(demande.phone)}</a>` : ''}
           </div>
         </div>
       </div>
@@ -325,20 +451,27 @@ function openDrawer(id) {
         <select class="form-select" id="drawer-status-select" style="padding: 6px 12px; font-weight: 600;">
           <option value="Nouveau" ${demande.status === 'Nouveau' ? 'selected' : ''}>Nouveau</option>
           <option value="En cours" ${demande.status === 'En cours' ? 'selected' : ''}>En cours</option>
-          <option value="Traite" ${demande.status === 'Traite' ? 'selected' : ''}>Traité</option>
+          <option value="Validé" ${demande.status === 'Validé' ? 'selected' : ''}>Validé</option>
+          <option value="Traite" ${demande.status === 'Traite' || demande.status === 'Traité' ? 'selected' : ''}>Traité</option>
+          <option value="Rejeté" ${demande.status === 'Rejeté' ? 'selected' : ''}>Rejeté</option>
         </select>
       </div>
+
+      <!-- Détails si fiche client -->
+      ${ficheClientBlock}
 
       <!-- Détails si estimation -->
       ${detailsBlock}
 
-      <!-- Message du client -->
-      <div style="margin-bottom: 24px;">
-        <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text);">Message ou description</h4>
-        <div style="padding: 16px; background-color: #FFF; border: 1px solid var(--admin-border); border-radius: var(--radius-sm); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--admin-text);">
-          ${escapeHTML(demande.message || 'Aucun message textuel fourni.')}
+      <!-- Message du client si contact classique -->
+      ${!isFicheClient ? `
+        <div style="margin-bottom: 24px;">
+          <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text);">Message ou description</h4>
+          <div style="padding: 16px; background-color: #FFF; border: 1px solid var(--admin-border); border-radius: var(--radius-sm); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--admin-text);">
+            ${escapeHTML(demande.message || 'Aucun message textuel fourni.')}
+          </div>
         </div>
-      </div>
+      ` : ''}
     </div>
 
     <div class="drawer-footer">
@@ -347,13 +480,16 @@ function openDrawer(id) {
       </button>
 
       <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-outline btn-sm" id="drawer-btn-print" title="Imprimer le dossier">
+          ${adminIcon('printer', { size: 14 })} Imprimer
+        </button>
         ${demande.phone ? `
           <a href="tel:${escapeHTML(demande.phone)}" class="btn btn-outline btn-sm">
             ${adminIcon('phone', { size: 14 })} Appeler
           </a>
         ` : ''}
         ${demande.email ? `
-          <a href="mailto:${escapeHTML(demande.email)}?subject=Re: ${encodeURIComponent(demande.subject || 'Votre demande sur Imolode')}" class="btn btn-primary btn-sm">
+          <a href="mailto:${escapeHTML(demande.email)}?subject=Re: ${encodeURIComponent(demande.subject || 'Votre dossier sur Imolode')}" class="btn btn-primary btn-sm">
             ${adminIcon('mail', { size: 14 })} Répondre
           </a>
         ` : ''}
@@ -373,6 +509,10 @@ function openDrawer(id) {
     renderResults();
   });
 
+  document.getElementById('drawer-btn-print')?.addEventListener('click', () => {
+    window.print();
+  });
+
   document.getElementById('drawer-btn-delete')?.addEventListener('click', async () => {
     const ok = await confirmModal({
       title: 'Supprimer la demande',
@@ -386,6 +526,52 @@ function openDrawer(id) {
       renderResults();
     }
   });
+
+  // Écouteurs pour agrandir la pièce d'identité en Lightbox
+  drawer.querySelectorAll('.btn-zoom-doc').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const img = btn.dataset.img;
+      const caption = btn.dataset.caption;
+      if (img) openLightbox(img, caption);
+    });
+  });
+}
+
+function openLightbox(imgUrl, captionText) {
+  const lightbox = document.getElementById('image-lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  const lbClose = document.getElementById('lightbox-close');
+
+  if (!lightbox || !lbImg) return;
+
+  lbImg.src = imgUrl;
+  if (lbCaption) {
+    lbCaption.innerHTML = `
+      <span>${escapeHTML(captionText || "Pièce d'identité officielle")}</span>
+      <a href="${escapeHTML(imgUrl)}" download class="btn btn-outline btn-sm" style="color:#FFF; border-color:rgba(255,255,255,0.4);">
+        ${adminIcon('download', { size: 14 })} Télécharger
+      </a>
+    `;
+  }
+
+  lightbox.hidden = false;
+
+  const closeLb = () => {
+    lightbox.hidden = true;
+    lbImg.src = '';
+  };
+
+  lbClose.onclick = closeLb;
+  lightbox.onclick = (e) => {
+    if (e.target === lightbox || e.target === lbClose) {
+      closeLb();
+    }
+  };
+  window.onkeydown = (e) => {
+    if (e.key === 'Escape') closeLb();
+  };
 }
 
 function closeDrawer() {

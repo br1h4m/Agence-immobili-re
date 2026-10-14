@@ -282,7 +282,32 @@ export function updatePropertyStatus(id, newStatus) {
    ========================================================================== */
 
 export function getDemandes({ type = '', status = '', search = '' } = {}) {
-  let list = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const demandesRaw = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const fichesRaw = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+
+  // Normaliser les fiches client en format enrichi
+  const fichesFormatted = fichesRaw.map((f) => ({
+    id: f.id,
+    type: 'Fiche client',
+    reference: f.reference,
+    nom: `${f.nom || ''} ${f.prenom || ''}`.trim(),
+    nomFamille: f.nom,
+    prenom: f.prenom,
+    email: f.email,
+    phone: f.telephone,
+    subject: `Dossier ${f.reference || ''} : ${f.transaction || 'Demande'} (${f.typeBien || 'Bien'})`,
+    message: `Dossier officiel de constitution client — Opération : ${f.transaction || 'Demande'} | Bien : ${f.typeBien || 'Non spécifié'} | Justificatif : ${f.pieceIdentite?.name || 'Joint'} | Signature : Recueillie`,
+    transaction: f.transaction,
+    typeBien: f.typeBien,
+    pieceIdentite: f.pieceIdentite,
+    signature: f.signature,
+    engagementAccepte: f.engagementAccepte,
+    isFicheClient: true,
+    status: f.status || 'Nouveau',
+    createdAt: f.createdAt
+  }));
+
+  let list = [...fichesFormatted, ...demandesRaw];
 
   if (type) {
     list = list.filter((d) => d.type === type);
@@ -296,7 +321,9 @@ export function getDemandes({ type = '', status = '', search = '' } = {}) {
       (d.nom || '').toLowerCase().includes(q) ||
       (d.email || '').toLowerCase().includes(q) ||
       (d.phone || '').toLowerCase().includes(q) ||
-      (d.subject || '').toLowerCase().includes(q)
+      (d.subject || '').toLowerCase().includes(q) ||
+      (d.reference || '').toLowerCase().includes(q) ||
+      (d.typeBien || '').toLowerCase().includes(q)
     );
   }
 
@@ -304,26 +331,49 @@ export function getDemandes({ type = '', status = '', search = '' } = {}) {
 }
 
 export function getDemandeById(id) {
-  const list = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  return list.find((d) => String(d.id) === String(id)) || null;
+  const all = getDemandes();
+  return all.find((d) => String(d.id) === String(id)) || null;
 }
 
 export function updateDemandeStatus(id, newStatus) {
-  const list = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  const item = list.find((d) => String(d.id) === String(id));
+  // Vérifie d'abord si c'est une fiche client
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const ficheItem = fiches.find((f) => String(f.id) === String(id));
+  if (ficheItem) {
+    ficheItem.status = newStatus;
+    writeStorage(KEY_FICHES_CLIENT, fiches);
+    return true;
+  }
+
+  // Sinon demande classique
+  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const item = demandes.find((d) => String(d.id) === String(id));
   if (item) {
     item.status = newStatus;
-    writeStorage(KEY_DEMANDES, list);
+    writeStorage(KEY_DEMANDES, demandes);
     return true;
   }
   return false;
 }
 
 export function deleteDemande(id) {
-  const list = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  const filtered = list.filter((d) => String(d.id) !== String(id));
-  writeStorage(KEY_DEMANDES, filtered);
-  return filtered.length !== list.length;
+  let changed = false;
+
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const fichesFiltered = fiches.filter((f) => String(f.id) !== String(id));
+  if (fichesFiltered.length !== fiches.length) {
+    writeStorage(KEY_FICHES_CLIENT, fichesFiltered);
+    changed = true;
+  }
+
+  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const demandesFiltered = demandes.filter((d) => String(d.id) !== String(id));
+  if (demandesFiltered.length !== demandes.length) {
+    writeStorage(KEY_DEMANDES, demandesFiltered);
+    changed = true;
+  }
+
+  return changed;
 }
 
 /* ==========================================================================

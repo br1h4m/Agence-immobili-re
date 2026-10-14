@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -28,6 +28,15 @@
   <!-- Volet latéral de consultation d'une demande -->
   <div class="admin-drawer" id="demande-drawer" aria-hidden="true"></div>
   <div class="sidebar-backdrop" id="drawer-backdrop"></div>
+
+  <!-- Lightbox d'inspection haute résolution pour pièces d'identité -->
+  <div class="admin-lightbox" id="image-lightbox" hidden>
+    <div class="admin-lightbox-content">
+      <button type="button" class="admin-lightbox-close" id="lightbox-close" aria-label="Fermer l'aperçu">×</button>
+      <img src="" alt="Pièce d'identité" id="lightbox-img" class="admin-lightbox-img">
+      <div class="admin-lightbox-caption" id="lightbox-caption"></div>
+    </div>
+  </div>
 
   <script type="module" src="/admin/demandes.js"></script>
 </body>
