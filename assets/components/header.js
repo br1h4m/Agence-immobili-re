@@ -26,6 +26,7 @@ export function Header({ activePage = '' } = {}) {
 
         <div class="header-actions">
           <a href="${url('/estimation')}" class="btn btn-outline btn-sm header-cta">Estimer mon bien</a>
+          <a href="${url('/fiche-client')}" class="btn btn-primary btn-sm header-cta">Fiche client</a>
           <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="mobile-nav"
             aria-label="Ouvrir le menu">
             <span class="menu-toggle-open">${icon('menu', { size: 22 })}</span>
@@ -39,7 +40,8 @@ export function Header({ activePage = '' } = {}) {
           <ul class="mobile-nav-list">${navItems}</ul>
         </nav>
         <div class="mobile-nav-footer">
-          <a href="${url('/estimation')}" class="btn btn-primary btn-block">Estimer mon bien</a>
+          <a href="${url('/estimation')}" class="btn btn-outline btn-block">Estimer mon bien</a>
+          <a href="${url('/fiche-client')}" class="btn btn-primary btn-block">Fiche client</a>
           <a href="tel:${CONFIG.PHONE_RAW}" class="btn btn-ghost btn-block">
             ${icon('phone', { size: 16 })}<span>${CONFIG.PHONE}</span>
           </a>

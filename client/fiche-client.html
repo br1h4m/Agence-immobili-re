@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiche client — Imolode</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/component.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+  <link rel="modulepreload" href="/client/includes/scripts.js">
+  <link rel="modulepreload" href="/assets/js/signature.js">
+
+  <style>
+    /* Styles dédiés à la fiche client Imolode */
+    .fiche-wrap {
+      max-width: 840px;
+      margin: 0 auto;
+    }
+
+    .fiche-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-soft);
+      border-radius: var(--radius-md);
+      padding: var(--space-6);
+      margin-bottom: var(--space-5);
+      box-shadow: var(--shadow-xs);
+      transition: border-color var(--transition-fast);
+    }
+
+    .fiche-section:focus-within {
+      border-color: var(--color-border);
+    }
+
+    .fiche-section-header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border-soft);
+    }
+
+    .fiche-section-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--color-accent-soft);
+      color: var(--color-accent-dark);
+      font-weight: 700;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .fiche-section-title-wrap {
+      flex: 1;
+    }
+
+    .fiche-section-title {
+      margin: 0 0 4px;
+      font-family: var(--font-serif);
+      font-size: 1.35rem;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .fiche-section-desc {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--color-muted);
+    }
+
+    .field-required {
+      color: var(--color-danger);
+      margin-left: 2px;
+      font-weight: 600;
+    }
+
+    .field-error {
+      color: var(--color-danger);
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .form-field.has-error input,
+    .form-field.has-error select,
+    .form-field.has-error textarea {
+      border-color: var(--color-danger);
+      background-color: #FFF9F8;
+    }
+
+    .form-field.has-error .field-error {
+      display: block;
+    }
+
+    .section-error {
+      color: var(--color-danger);
+      font-size: 0.82rem;
+      margin-top: var(--space-3);
+      display: none;
+      font-weight: 500;
+    }
+
+    .section-error.is-visible {
+      display: block;
+    }
+
+    /* Grille de sélection pour le type de transaction */
+    .transaction-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .transaction-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: var(--space-5);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .transaction-card input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .transaction-card:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-1px);
+    }
+
+    .transaction-card.is-checked {
+      border-color: var(--color-accent);
+      background: var(--color-accent-soft);
+    }
+
+    .transaction-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .transaction-card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .transaction-card-radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--color-border);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+
+    .transaction-card.is-checked .transaction-card-radio {
+      border-color: var(--color-accent);
+      background: var(--color-accent);
+    }
+
+    .transaction-card.is-checked .transaction-card-radio::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #FFFFFF;
+    }
+
+    .transaction-card-desc {
+      font-size: 0.84rem;
+      color: var(--color-muted);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Grille de sélection pour le type de bien */
+    .property-type-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-3);
+    }
+
+    .property-type-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-4) var(--space-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      gap: 8px;
+      min-height: 96px;
+    }
+
+    .property-type-card input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .property-type-card:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-1px);
+    }
+
+    .property-type-card.is-checked {
+      border-color: var(--color-accent);
+      background: var(--color-accent-soft);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .property-type-card .icon {
+      color: var(--color-muted);
+      transition: color var(--transition-fast);
+    }
+
+    .property-type-card:hover .icon,
+    .property-type-card.is-checked .icon {
+      color: var(--color-accent-dark);
+    }
+
+    .property-type-name {
+      font-size: 0.88rem;
+    }
+
+    /* Zone de téléversement fichier (Section 4) */
+    .upload-dropzone {
+      position: relative;
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: var(--space-6) var(--space-4);
+      text-align: center;
+      background: var(--color-bg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      outline: none;
+    }
+
+    .upload-dropzone:hover,
+    .upload-dropzone.is-dragover {
+      border-color: var(--color-accent);
+      background: var(--color-accent-soft);
+    }
+
+    .upload-dropzone.has-error {
+      border-color: var(--color-danger);
+      background: #FFF9F8;
+    }
+
+    .upload-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--color-surface);
+      color: var(--color-accent-dark);
+      margin-bottom: var(--space-3);
+      box-shadow: var(--shadow-xs);
+    }
+
+    .upload-title {
+      font-size: 0.96rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0 0 4px;
+    }
+
+    .upload-subtitle {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin: 0;
+    }
+
+    .upload-preview {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-bg);
+      margin-top: var(--space-3);
+    }
+
+    .upload-preview.is-visible {
+      display: flex;
+    }
+
+    .upload-preview-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .upload-thumbnail {
+      width: 54px;
+      height: 54px;
+      border-radius: var(--radius-xs);
+      object-fit: cover;
+      border: 1px solid var(--color-border);
+      background: #FFFFFF;
+      flex-shrink: 0;
+    }
+
+    .upload-pdf-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: var(--radius-xs);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-accent-dark);
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .upload-file-info {
+      min-width: 0;
+    }
+
+    .upload-file-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0 0 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .upload-file-meta {
+      font-size: 0.78rem;
+      color: var(--color-muted);
+      margin: 0;
+    }
+
+    /* Zone d'engagement et signature (Section 5) */
+    .engagement-callout {
+      padding: var(--space-4) var(--space-5);
+      background: var(--color-accent-soft);
+      border-left: 3px solid var(--color-accent);
+      border-radius: var(--radius-xs);
+      margin-bottom: var(--space-5);
+    }
+
+    .engagement-callout p {
+      margin: 0;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .signature-card {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: #FFFFFF;
+      position: relative;
+      transition: border-color var(--transition-fast);
+    }
+
+    .signature-card.has-error {
+      border-color: var(--color-danger);
+      background: #FFF9F8;
+    }
+
+    .signature-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 190px;
+      background: #FFFFFF;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      overflow: hidden;
+    }
+
+    .signature-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .signature-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      color: rgba(28, 28, 28, 0.16);
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      user-select: none;
+      transition: opacity var(--transition-fast);
+    }
+
+    .signature-watermark.is-hidden {
+      opacity: 0;
+    }
+
+    .signature-baseline {
+      position: absolute;
+      bottom: 35px;
+      left: 30px;
+      right: 30px;
+      height: 1px;
+      background: repeating-linear-gradient(90deg, var(--color-border), var(--color-border) 4px, transparent 4px, transparent 8px);
+      pointer-events: none;
+    }
+
+    .signature-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border);
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    }
+
+    .signature-hint {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      margin: 0;
+    }
+
+    /* Actions et validation */
+    .fiche-actions {
+      margin-top: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .fiche-note {
+      font-size: 0.8rem;
+      color: var(--color-muted);
+      text-align: center;
+      margin: 0;
+    }
+
+    /* Écran de confirmation de succès */
+    .fiche-success {
+      display: none;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-soft);
+      border-radius: var(--radius-md);
+      padding: var(--space-7);
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+    }
+
+    .fiche-success.is-visible {
+      display: block;
+    }
+
+    .success-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--color-accent-soft);
+      color: var(--color-accent-dark);
+      margin-bottom: var(--space-4);
+    }
+
+    .success-title {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      font-weight: 500;
+      margin: 0 0 var(--space-2);
+      color: var(--color-text);
+    }
+
+    .success-lead {
+      color: var(--color-muted);
+      font-size: 0.98rem;
+      margin: 0 0 var(--space-5);
+    }
+
+    .recap-card {
+      text-align: left;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-bg);
+      padding: var(--space-5);
+      margin: var(--space-6) 0;
+    }
+
+    .recap-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: var(--space-3);
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .recap-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    .recap-ref {
+      font-family: monospace;
+      font-size: 0.88rem;
+      padding: 3px 8px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xs);
+      color: var(--color-accent-dark);
+      font-weight: 600;
+    }
+
+    .recap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .recap-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .recap-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-muted);
+    }
+
+    .recap-val {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--color-text);
+      word-break: break-word;
+    }
+
+    .recap-signature-thumb {
+      max-height: 50px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xs);
+      background: #FFFFFF;
+      padding: 2px 6px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .success-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: var(--space-6);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .property-type-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .transaction-grid {
+        grid-template-columns: 1fr;
+      }
+      .recap-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .property-type-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .fiche-section {
+        padding: var(--space-5) var(--space-4);
+      }
+      .fiche-section-header {
+        gap: var(--space-3);
+      }
+      .fiche-section-num {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+      }
+      .fiche-section-title {
+        font-size: 1.18rem;
+      }
+      .signature-footer {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+      .signature-footer .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="section-eyebrow">Dossier client</span>
+        <h1 class="section-title">Fiche client</h1>
+        <p class="section-lead">
+          Constitution officielle de votre dossier pour toute démarche de demande ou d'offre immobilière auprès de l'agence Imolode.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="fiche-wrap">
+          <!-- Formulaire de constitution de dossier -->
+          <form id="fiche-client-form" novalidate>
+
+            <!-- SECTION 1 : Informations personnelles -->
+            <fieldset class="fiche-section" id="section-personnelle">
+              <legend class="sr-only">Informations personnelles</legend>
+              <div class="fiche-section-header">
+                <span class="fiche-section-num" aria-hidden="true">01</span>
+                <div class="fiche-section-title-wrap">
+                  <h2 class="fiche-section-title">Informations personnelles</h2>
+                  <p class="fiche-section-desc">Renseignez vos coordonnées exactes pour le suivi officiel du dossier.</p>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field" id="field-nom">
+                  <span>Nom <span class="field-required">*</span></span>
+                  <input type="text" name="nom" id="input-nom" placeholder="Ex. Gahame" autocomplete="family-name" required>
+                  <span class="field-error" id="error-nom">Veuillez renseigner votre nom.</span>
+                </label>
+
+                <label class="form-field" id="field-prenom">
+                  <span>Prénom <span class="field-required">*</span></span>
+                  <input type="text" name="prenom" id="input-prenom" placeholder="Ex. Hocine" autocomplete="given-name" required>
+                  <span class="field-error" id="error-prenom">Veuillez renseigner votre prénom.</span>
+                </label>
+              </div>
+
+              <div class="form-grid" style="margin-top: var(--space-4);">
+                <label class="form-field" id="field-telephone">
+                  <span>Numéro de téléphone <span class="field-required">*</span></span>
+                  <input type="tel" name="telephone" id="input-telephone" placeholder="Ex. 0661 56 03 85" autocomplete="tel" required>
+                  <span class="field-error" id="error-telephone">Veuillez renseigner un numéro de téléphone valide.</span>
+                </label>
+
+                <label class="form-field" id="field-email">
+                  <span>Adresse e-mail <span class="field-required">*</span></span>
+                  <input type="email" name="email" id="input-email" placeholder="Ex. contact@exemple.com" autocomplete="email" required>
+                  <span class="field-error" id="error-email">Veuillez renseigner une adresse e-mail valide.</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <!-- SECTION 2 : Type de transaction -->
+            <fieldset class="fiche-section" id="section-transaction">
+              <legend class="sr-only">Type de transaction</legend>
+              <div class="fiche-section-header">
+                <span class="fiche-section-num" aria-hidden="true">02</span>
+                <div class="fiche-section-title-wrap">
+                  <h2 class="fiche-section-title">Type de transaction</h2>
+                  <p class="fiche-section-desc">Précisez si vous formulez une recherche ou si vous proposez un bien.</p>
+                </div>
+              </div>
+
+              <div class="transaction-grid">
+                <label class="transaction-card" id="card-demande">
+                  <input type="radio" name="type_transaction" value="Demande" required>
+                  <div class="transaction-card-head">
+                    <span class="transaction-card-title">Demande</span>
+                    <span class="transaction-card-radio" aria-hidden="true"></span>
+                  </div>
+                  <p class="transaction-card-desc">Vous recherchez un bien immobilier à acquérir, louer ou pour un investissement.</p>
+                </label>
+
+                <label class="transaction-card" id="card-offre">
+                  <input type="radio" name="type_transaction" value="Offre" required>
+                  <div class="transaction-card-head">
+                    <span class="transaction-card-title">Offre</span>
+                    <span class="transaction-card-radio" aria-hidden="true"></span>
+                  </div>
+                  <p class="transaction-card-desc">Vous proposez un bien immobilier à la vente ou à la mise en location.</p>
+                </label>
+              </div>
+              <span class="section-error" id="error-transaction">Veuillez sélectionner un type de transaction (Demande ou Offre).</span>
+            </fieldset>
+
+            <!-- SECTION 3 : Type de bien immobilier -->
+            <fieldset class="fiche-section" id="section-bien">
+              <legend class="sr-only">Type de bien immobilier</legend>
+              <div class="fiche-section-header">
+                <span class="fiche-section-num" aria-hidden="true">03</span>
+                <div class="fiche-section-title-wrap">
+                  <h2 class="fiche-section-title">Type de bien immobilier</h2>
+                  <p class="fiche-section-desc">Sélectionnez la catégorie de propriété concernée par votre dossier.</p>
+                </div>
+              </div>
+
+              <div class="property-type-grid" id="property-type-grid">
+                <label class="property-type-card" data-val="Appartement">
+                  <input type="radio" name="type_bien" value="Appartement" required>
+                  <span class="icon-slot" data-icon="building"></span>
+                  <span class="property-type-name">Appartement</span>
+                </label>
+
+                <label class="property-type-card" data-val="Villa">
+                  <input type="radio" name="type_bien" value="Villa">
+                  <span class="icon-slot" data-icon="home"></span>
+                  <span class="property-type-name">Villa</span>
+                </label>
+
+                <label class="property-type-card" data-val="Commerce">
+                  <input type="radio" name="type_bien" value="Commerce">
+                  <span class="icon-slot" data-icon="briefcase"></span>
+                  <span class="property-type-name">Commerce</span>
+                </label>
+
+                <label class="property-type-card" data-val="Terrain">
+                  <input type="radio" name="type_bien" value="Terrain">
+                  <span class="icon-slot" data-icon="sprout"></span>
+                  <span class="property-type-name">Terrain</span>
+                </label>
+
+                <label class="property-type-card" data-val="Dépôt">
+                  <input type="radio" name="type_bien" value="Dépôt">
+                  <span class="icon-slot" data-icon="layers"></span>
+                  <span class="property-type-name">Dépôt</span>
+                </label>
+              </div>
+              <span class="section-error" id="error-bien">Veuillez sélectionner le type de bien immobilier concerné.</span>
+            </fieldset>
+
+            <!-- SECTION 4 : Copie d'identité -->
+            <fieldset class="fiche-section" id="section-identite">
+              <legend class="sr-only">Copie d'identité</legend>
+              <div class="fiche-section-header">
+                <span class="fiche-section-num" aria-hidden="true">04</span>
+                <div class="fiche-section-title-wrap">
+                  <h2 class="fiche-section-title">Copie d'identité</h2>
+                  <p class="fiche-section-desc">Téléversez une pièce d'identité officielle (CNI, permis ou passeport) en cours de validité.</p>
+                </div>
+              </div>
+
+              <input type="file" id="input-file" name="piece_identite" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" style="display:none;" required>
+
+              <div class="upload-dropzone" id="upload-dropzone" tabindex="0" role="button" aria-label="Sélectionner une pièce d'identité">
+                <div class="upload-icon" id="dropzone-icon"></div>
+                <p class="upload-title">Cliquez pour sélectionner un document ou glissez-le ici</p>
+                <p class="upload-subtitle">Formats acceptés : Images (JPG, PNG, WEBP) ou PDF — 10 Mo maximum</p>
+              </div>
+
+              <div class="upload-preview" id="upload-preview">
+                <div class="upload-preview-left">
+                  <div id="preview-media-slot"></div>
+                  <div class="upload-file-info">
+                    <p class="upload-file-name" id="preview-file-name"></p>
+                    <p class="upload-file-meta" id="preview-file-meta"></p>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-remove-file" title="Retirer ce fichier">
+                  Retirer
+                </button>
+              </div>
+
+              <span class="section-error" id="error-file">Veuillez joindre une copie de votre pièce d'identité (image ou PDF).</span>
+            </fieldset>
+
+            <!-- SECTION 5 : Engagement et signature électronique -->
+            <fieldset class="fiche-section" id="section-signature">
+              <legend class="sr-only">Engagement et signature électronique</legend>
+              <div class="fiche-section-header">
+                <span class="fiche-section-num" aria-hidden="true">05</span>
+                <div class="fiche-section-title-wrap">
+                  <h2 class="fiche-section-title">Engagement et signature électronique</h2>
+                  <p class="fiche-section-desc">Validez la conformité légale de votre démarche par signature manuscrite.</p>
+                </div>
+              </div>
+
+              <div class="engagement-callout">
+                <p>Ceci constitue un engagement officiel. En cas de transaction, le client est tenu d'honorer les frais de l'agence conformément aux dispositions réglementaires en vigueur.</p>
+              </div>
+
+              <div class="signature-card" id="signature-card">
+                <div class="signature-canvas-wrap">
+                  <canvas id="signature-canvas" class="signature-canvas" aria-label="Zone de signature électronique"></canvas>
+                  <div class="signature-baseline" aria-hidden="true"></div>
+                  <span class="signature-watermark" id="signature-watermark" aria-hidden="true">Signer ici</span>
+                </div>
+                <div class="signature-footer">
+                  <p class="signature-hint">Le client signe avec son doigt ou sa souris</p>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-signature">
+                    Effacer
+                  </button>
+                </div>
+              </div>
+
+              <span class="section-error" id="error-signature">Veuillez apposer votre signature dans la zone prévue avant de valider.</span>
+            </fieldset>
+
+            <!-- Validation et soumission -->
+            <div class="fiche-actions">
+              <button type="submit" class="btn btn-primary btn-lg btn-block" id="btn-submit-fiche">
+                Valider et enregistrer ma fiche client
+              </button>
+              <p class="fiche-note">
+                Dossier confidentiel réservé aux démarches immobilières de l'Agence Immobilière Agréée Imolode.
+              </p>
+            </div>
+          </form>
+
+          <!-- Écran de confirmation visuelle (affiché après soumission simulée) -->
+          <div class="fiche-success" id="fiche-success" hidden>
+            <div class="success-badge" id="success-icon-slot"></div>
+            <h2 class="success-title">Fiche client enregistrée avec succès</h2>
+            <p class="success-lead">
+              Votre dossier de constitution a bien été réceptionné par notre équipe.
+            </p>
+
+            <div class="recap-card">
+              <div class="recap-head">
+                <span class="recap-title">Récapitulatif du dossier client</span>
+                <span class="recap-ref" id="recap-ref">#IML-DOS-0000</span>
+              </div>
+
+              <div class="recap-grid">
+                <div class="recap-row">
+                  <span class="recap-label">Nom et Prénom</span>
+                  <span class="recap-val" id="recap-nom-prenom">—</span>
+                </div>
+                <div class="recap-row">
+                  <span class="recap-label">Numéro de téléphone</span>
+                  <span class="recap-val" id="recap-telephone">—</span>
+                </div>
+                <div class="recap-row">
+                  <span class="recap-label">Adresse e-mail</span>
+                  <span class="recap-val" id="recap-email">—</span>
+                </div>
+                <div class="recap-row">
+                  <span class="recap-label">Nature de l'opération</span>
+                  <span class="recap-val" id="recap-transaction">—</span>
+                </div>
+                <div class="recap-row">
+                  <span class="recap-label">Type de bien</span>
+                  <span class="recap-val" id="recap-bien">—</span>
+                </div>
+                <div class="recap-row">
+                  <span class="recap-label">Pièce d'identité jointe</span>
+                  <span class="recap-val" id="recap-identite">—</span>
+                </div>
+                <div class="recap-row" style="grid-column: 1 / -1;">
+                  <span class="recap-label">Signature électronique enregistrée</span>
+                  <div id="recap-signature-slot"></div>
+                </div>
+              </div>
+            </div>
+
+            <p style="font-size:0.9rem; color:var(--color-muted); margin:0 0 var(--space-6);">
+              Un conseiller de l'agence Imolode prendra contact avec vous dans les plus brefs délais pour donner suite à votre dossier.
+            </p>
+
+            <div class="success-actions">
+              <a href="/client/biens" class="btn btn-primary">Parcourir nos biens</a>
+              <a href="/client/" class="btn btn-outline">Retour à l'accueil</a>
+              <button type="button" class="btn btn-ghost" id="btn-reset-form">Constituer un autre dossier</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from '/client/includes/scripts.js';
+    import { icon, escapeHTML } from '/client/includes/helpers.js';
+    import { SignaturePad } from '/assets/js/signature.js';
+
+    await initPage({
+      page: 'fiche-client',
+      title: 'Fiche client'
+    });
+
+    // Insertion des icônes SVG natives du design system
+    document.getElementById('dropzone-icon').innerHTML = icon('file-text', { size: 24 });
+    document.getElementById('success-icon-slot').innerHTML = icon('check', { size: 36 });
+
+    document.querySelectorAll('#property-type-grid .icon-slot').forEach((slot) => {
+      const iconName = slot.getAttribute('data-icon');
+      if (iconName) slot.innerHTML = icon(iconName, { size: 22 });
+    });
+
+    // Initialisation du pad de signature électronique Canvas
+    const canvas = document.getElementById('signature-canvas');
+    const watermark = document.getElementById('signature-watermark');
+    const signatureCard = document.getElementById('signature-card');
+    const errorSignature = document.getElementById('error-signature');
+
+    const signaturePad = new SignaturePad(canvas, {
+      color: '#1C1C1C',
+      lineWidth: 2.2,
+      onChange: (hasContent) => {
+        if (hasContent) {
+          watermark.classList.add('is-hidden');
+          signatureCard.classList.remove('has-error');
+          errorSignature.classList.remove('is-visible');
+        } else {
+          watermark.classList.remove('is-hidden');
+        }
+      }
+    });
+
+    document.getElementById('btn-clear-signature').addEventListener('click', () => {
+      signaturePad.clear();
+      watermark.classList.remove('is-hidden');
+    });
+
+    // Gestion interactive des types de transaction (boutons radio stylés)
+    const transactionCards = document.querySelectorAll('.transaction-card');
+    transactionCards.forEach((card) => {
+      const radio = card.querySelector('input[type="radio"]');
+      card.addEventListener('click', () => {
+        transactionCards.forEach((c) => c.classList.remove('is-checked'));
+        card.classList.add('is-checked');
+        radio.checked = true;
+        document.getElementById('error-transaction').classList.remove('is-visible');
+      });
+    });
+
+    // Gestion interactive des types de bien (boutons radio stylés)
+    const propertyTypeCards = document.querySelectorAll('.property-type-card');
+    propertyTypeCards.forEach((card) => {
+      const radio = card.querySelector('input[type="radio"]');
+      card.addEventListener('click', () => {
+        propertyTypeCards.forEach((c) => c.classList.remove('is-checked'));
+        card.classList.add('is-checked');
+        radio.checked = true;
+        document.getElementById('error-bien').classList.remove('is-visible');
+      });
+    });
+
+    // Téléversement et prévisualisation du document d'identité (Images & PDF)
+    const fileInput = document.getElementById('input-file');
+    const dropzone = document.getElementById('upload-dropzone');
+    const previewWrap = document.getElementById('upload-preview');
+    const mediaSlot = document.getElementById('preview-media-slot');
+    const fileNameEl = document.getElementById('preview-file-name');
+    const fileMetaEl = document.getElementById('preview-file-meta');
+    const btnRemoveFile = document.getElementById('btn-remove-file');
+    const errorFile = document.getElementById('error-file');
+
+    let currentFile = null;
+    let currentFileDataUrl = null;
+
+    function formatFileSize(bytes) {
+      if (!bytes || bytes <= 0) return '0 Ko';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' Ko';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' Mo';
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+
+      // Validation type : images ou PDF
+      const isImage = file.type.startsWith('image/');
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      if (!isImage && !isPdf) {
+        errorFile.textContent = 'Format non supporté. Veuillez sélectionner une image (JPG, PNG, WEBP) ou un document PDF.';
+        errorFile.classList.add('is-visible');
+        dropzone.classList.add('has-error');
+        return;
+      }
+
+      // Limite 10 Mo
+      if (file.size > 10 * 1024 * 1024) {
+        errorFile.textContent = 'Le fichier dépasse la taille maximale autorisée (10 Mo).';
+        errorFile.classList.add('is-visible');
+        dropzone.classList.add('has-error');
+        return;
+      }
+
+      currentFile = file;
+      errorFile.classList.remove('is-visible');
+      dropzone.classList.remove('has-error');
+
+      fileNameEl.textContent = file.name;
+      fileMetaEl.textContent = `${formatFileSize(file.size)} · ${isPdf ? 'Document PDF' : 'Image'}`;
+
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          currentFileDataUrl = e.target.result;
+          mediaSlot.innerHTML = `<img src="${currentFileDataUrl}" alt="Aperçu ${escapeHTML(file.name)}" class="upload-thumbnail">`;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        currentFileDataUrl = null;
+        mediaSlot.innerHTML = `<div class="upload-pdf-icon">${icon('file-text', { size: 20 })}<span>PDF</span></div>`;
+      }
+
+      dropzone.style.display = 'none';
+      previewWrap.classList.add('is-visible');
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    // Drag and drop
+    ['dragenter', 'dragover'].forEach((evt) => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('is-dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach((evt) => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('is-dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt?.files?.[0]) {
+        handleFile(dt.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files?.[0]) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    btnRemoveFile.addEventListener('click', () => {
+      currentFile = null;
+      currentFileDataUrl = null;
+      fileInput.value = '';
+      mediaSlot.innerHTML = '';
+      previewWrap.classList.remove('is-visible');
+      dropzone.style.display = 'block';
+    });
+
+    // Nettoyage dynamique des erreurs sur saisie
+    const textInputs = [
+      { id: 'input-nom', fieldId: 'field-nom' },
+      { id: 'input-prenom', fieldId: 'field-prenom' },
+      { id: 'input-telephone', fieldId: 'field-telephone' },
+      { id: 'input-email', fieldId: 'field-email' }
+    ];
+
+    textInputs.forEach(({ id, fieldId }) => {
+      const input = document.getElementById(id);
+      const field = document.getElementById(fieldId);
+      input.addEventListener('input', () => {
+        if (input.value.trim()) {
+          field.classList.remove('has-error');
+        }
+      });
+    });
+
+    // Soumission et validation du formulaire
+    const form = document.getElementById('fiche-client-form');
+    const successCard = document.getElementById('fiche-success');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      let hasError = false;
+      let firstErrorElement = null;
+
+      function reportError(element, errorSpan) {
+        hasError = true;
+        if (element) {
+          element.classList.add('has-error');
+        }
+        if (errorSpan) {
+          errorSpan.classList.add('is-visible');
+        }
+        if (!firstErrorElement && element) {
+          firstErrorElement = element;
+        }
+      }
+
+      // 1. Nom
+      const nomInput = document.getElementById('input-nom');
+      const fieldNom = document.getElementById('field-nom');
+      if (!nomInput.value.trim()) {
+        reportError(fieldNom);
+      } else {
+        fieldNom.classList.remove('has-error');
+      }
+
+      // 2. Prénom
+      const prenomInput = document.getElementById('input-prenom');
+      const fieldPrenom = document.getElementById('field-prenom');
+      if (!prenomInput.value.trim()) {
+        reportError(fieldPrenom);
+      } else {
+        fieldPrenom.classList.remove('has-error');
+      }
+
+      // 3. Téléphone (minimum 8 chiffres)
+      const telInput = document.getElementById('input-telephone');
+      const fieldTel = document.getElementById('field-telephone');
+      const cleanTel = telInput.value.replace(/[^0-9+]/g, '');
+      if (!telInput.value.trim() || cleanTel.length < 8) {
+        reportError(fieldTel);
+      } else {
+        fieldTel.classList.remove('has-error');
+      }
+
+      // 4. E-mail
+      const emailInput = document.getElementById('input-email');
+      const fieldEmail = document.getElementById('field-email');
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailInput.value.trim() || !emailPattern.test(emailInput.value.trim())) {
+        reportError(fieldEmail);
+      } else {
+        fieldEmail.classList.remove('has-error');
+      }
+
+      // 5. Type de transaction
+      const checkedTransaction = form.querySelector('input[name="type_transaction"]:checked');
+      const errorTransaction = document.getElementById('error-transaction');
+      const sectionTransaction = document.getElementById('section-transaction');
+      if (!checkedTransaction) {
+        reportError(sectionTransaction, errorTransaction);
+      } else {
+        errorTransaction.classList.remove('is-visible');
+      }
+
+      // 6. Type de bien
+      const checkedBien = form.querySelector('input[name="type_bien"]:checked');
+      const errorBien = document.getElementById('error-bien');
+      const sectionBien = document.getElementById('section-bien');
+      if (!checkedBien) {
+        reportError(sectionBien, errorBien);
+      } else {
+        errorBien.classList.remove('is-visible');
+      }
+
+      // 7. Copie d'identité
+      const sectionIdentite = document.getElementById('section-identite');
+      if (!currentFile) {
+        errorFile.textContent = "Veuillez joindre une copie de votre pièce d'identité (image ou PDF).";
+        reportError(dropzone, errorFile);
+      } else {
+        errorFile.classList.remove('is-visible');
+        dropzone.classList.remove('has-error');
+      }
+
+      // 8. Signature
+      if (signaturePad.isEmpty()) {
+        reportError(signatureCard, errorSignature);
+      } else {
+        signatureCard.classList.remove('has-error');
+        errorSignature.classList.remove('is-visible');
+      }
+
+      // Si erreur, scroll jusqu'au premier champ invalide
+      if (hasError) {
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      // Simulation de soumission réussie
+      const dossierRef = `IML-DOS-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      document.getElementById('recap-ref').textContent = '#' + dossierRef;
+      document.getElementById('recap-nom-prenom').textContent = `${nomInput.value.trim()} ${prenomInput.value.trim()}`;
+      document.getElementById('recap-telephone').textContent = telInput.value.trim();
+      document.getElementById('recap-email').textContent = emailInput.value.trim();
+      document.getElementById('recap-transaction').textContent = checkedTransaction.value;
+      document.getElementById('recap-bien').textContent = checkedBien.value;
+      document.getElementById('recap-identite').textContent = `${currentFile.name} (${formatFileSize(currentFile.size)})`;
+
+      const signatureDataUrl = signaturePad.toDataURL();
+      const sigSlot = document.getElementById('recap-signature-slot');
+      if (signatureDataUrl) {
+        sigSlot.innerHTML = `<img src="${signatureDataUrl}" alt="Signature du client" class="recap-signature-thumb">`;
+      } else {
+        sigSlot.innerHTML = '<span>Signature électronique validée</span>';
+      }
+
+      // Basculer l'affichage vers la confirmation
+      form.style.display = 'none';
+      successCard.hidden = false;
+      successCard.classList.add('is-visible');
+      successCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // Recommencer un dossier
+    document.getElementById('btn-reset-form').addEventListener('click', () => {
+      form.reset();
+      transactionCards.forEach((c) => c.classList.remove('is-checked'));
+      propertyTypeCards.forEach((c) => c.classList.remove('is-checked'));
+      btnRemoveFile.click();
+      signaturePad.clear();
+      watermark.classList.remove('is-hidden');
+      successCard.classList.remove('is-visible');
+      successCard.hidden = true;
+      form.style.display = 'block';
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  </script>
+</body>
+</html>

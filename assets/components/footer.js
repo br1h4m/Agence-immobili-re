@@ -38,7 +38,10 @@ export function Footer() {
 
           <div class="footer-col">
             <h4 class="footer-heading">Navigation</h4>
-            <ul class="footer-list">${navLinks}</ul>
+            <ul class="footer-list">
+              ${navLinks}
+              <li><a href="${url('/fiche-client')}">Fiche client</a></li>
+            </ul>
           </div>
 
           <div class="footer-col">
