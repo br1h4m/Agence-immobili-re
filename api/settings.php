@@ -1,33 +1,95 @@
 <?php
-// api/settings.php
+/**
+ * ============================================================================
+ * api/settings.php - API des paramètres généraux de l'agence Immolode
+ * ============================================================================
+ * Requêtes MySQL préparées avec MySQLi (sans PDO).
+ */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../backend/bootstrap.php';
+require_once __DIR__ . '/../backend/db.php';
 
-use Immolode\Helpers\Response;
-use Immolode\Helpers\Auth;
-use Immolode\Models\Setting;
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-Response::handlePreflight();
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-switch ($method) {
-    case 'GET':
-        $settings = Setting::getAll();
-        Response::json($settings);
-        break;
+try {
+    switch ($method) {
+        // --------------------------------------------------------------------
+        // 1. GET : Récupération de l'ensemble des paramètres
+        // --------------------------------------------------------------------
+        case 'GET':
+            $res = $conn->query("SELECT `cle`, `valeur` FROM `parametres`");
+            $settings = [];
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    $settings[$row['cle']] = $row['valeur'];
+                }
+            }
+            echo json_encode($settings);
+            break;
 
-    case 'POST':
-        $input = Response::getJsonInput();
-        if (empty($input)) {
-            $input = $_POST;
-        }
+        // --------------------------------------------------------------------
+        // 2. POST : Enregistrement ou mise à jour des paramètres
+        // --------------------------------------------------------------------
+        case 'POST':
+            $rawInput = file_get_contents('php://input');
+            $input = json_decode($rawInput, true) ?: $_POST;
 
-        Setting::updateAll($input);
-        Response::success(Setting::getAll(), 'Paramètres enregistrés avec succès.');
-        break;
+            if (empty($input)) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'error' => 'Aucune donnée fournie']);
+                exit;
+            }
 
-    default:
-        Response::error('Méthode non autorisée.', 405);
+            // Préparation de la requête d'insertion ou mise à jour
+            $stmt = $conn->prepare("
+                INSERT INTO `parametres` (`cle`, `valeur`)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE `valeur` = VALUES(`valeur`)
+            ");
+
+            foreach ($input as $cle => $valeur) {
+                if (is_array($valeur) || is_object($valeur)) {
+                    $valStr = json_encode($valeur, JSON_UNESCAPED_UNICODE);
+                } else {
+                    $valStr = (string)$valeur;
+                }
+                $cleStr = (string)$cle;
+                $stmt->bind_param("ss", $cleStr, $valStr);
+                $stmt->execute();
+            }
+
+            // Renvoi des paramètres à jour
+            $res = $conn->query("SELECT `cle`, `valeur` FROM `parametres`");
+            $updated = [];
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    $updated[$row['cle']] = $row['valeur'];
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Paramètres mis à jour avec succès',
+                'data' => $updated
+            ]);
+            break;
+
+        default:
+            http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
+            break;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }

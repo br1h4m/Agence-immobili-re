@@ -1,14 +1,100 @@
 <?php
-// client/bien.php
+/**
+ * ============================================================================
+ * client/bien.php - Page de détail d'un bien immobilier
+ * ============================================================================
+ * Récupère les informations complètes d'un bien par son identifiant (ID)
+ * à l'aide d'une requête MySQL préparée avec MySQLi (sans PDO).
+ */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../backend/bootstrap.php';
+require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/includes/card.php';
 
-use Immolode\Models\Property;
+// ----------------------------------------------------------------------------
+// 1. Récupération de l'identifiant du bien et requête préparée MySQLi
+// ----------------------------------------------------------------------------
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$property = null;
 
-$id = $_GET['id'] ?? null;
-$property = $id ? Property::getById($id) : null;
-$pageTitle = $property ? htmlspecialchars($property['title']) . ' — Imolode' : 'Détail du bien — Imolode';
+if ($id > 0) {
+    // Requête préparée pour sécuriser l'accès et récupérer la fiche du bien
+    $stmt = $conn->prepare("SELECT * FROM `properties` WHERE `id` = ? LIMIT 1");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $property = $result->fetch_assoc();
+}
+
+// Configuration de la page selon l'existence du bien
+if ($property) {
+    $pageTitle = htmlspecialchars($property['titre']) . ' — Imolode';
+    $titre     = $property['titre'];
+    $trans     = ($property['transaction'] === 'Louer') ? 'À louer' : 'À vendre';
+    $statut    = $property['statut'] ?? 'Disponible';
+    $prix      = format_price($property['prix'], $property['periode_prix'] ?? null);
+
+    // Décodage des images et équipements depuis le JSON
+    $images = json_decode($property['images'] ?? '[]', true) ?: [];
+    if (empty($images)) {
+        $images = ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'];
+    }
+
+    $equipements = json_decode($property['equipements'] ?? '[]', true) ?: [];
+
+    // Localisation complète
+    $loc_parts = array_filter([$property['quartier'], $property['commune'], $property['wilaya']]);
+    $full_location = implode(', ', $loc_parts);
+
+    // Caractéristiques techniques (specs)
+    $specs = [];
+    if (!empty($property['surface'])) {
+        $specs[] = ['Surface habitable', number_format((float)$property['surface'], 0, ',', ' ') . ' m²'];
+    }
+    if (!empty($property['surface_terrain'])) {
+        $specs[] = ['Surface du terrain', number_format((float)$property['surface_terrain'], 0, ',', ' ') . ' m²'];
+    }
+    if (!empty($property['chambres'])) {
+        $specs[] = ['Chambres', (int)$property['chambres']];
+    }
+    if (!empty($property['salles_de_bain'])) {
+        $specs[] = ['Salles de bain', (int)$property['salles_de_bain']];
+    }
+    if ($property['garage'] !== null) {
+        $specs[] = ['Garage', $property['garage'] ? 'Oui' : 'Non'];
+    }
+    if ($property['etage'] !== null && $property['etage'] !== '') {
+        $specs[] = ['Étage', (int)$property['etage'] === 0 ? 'Rez-de-chaussée' : $property['etage'] . 'e étage'];
+    }
+    if (!empty($property['etages'])) {
+        $specs[] = ["Nombre d'étages", (int)$property['etages']];
+    }
+    if (!empty($property['annee'])) {
+        $specs[] = ['Année de construction', (int)$property['annee']];
+    }
+    if (!empty($property['reference'])) {
+        $specs[] = ['Référence annonce', $property['reference']];
+    }
+
+    // Requête préparée pour les biens similaires
+    $sim_stmt = $conn->prepare("SELECT * FROM `properties` WHERE `id` != ? AND `statut` != 'Archivé' AND (`transaction` = ? OR `type` = ?) ORDER BY `date_creation` DESC LIMIT 3");
+    $sim_stmt->bind_param("iss", $id, $property['transaction'], $property['type']);
+    $sim_stmt->execute();
+    $similar_result = $sim_stmt->get_result();
+
+    // Coordonnées de contact agence
+    $agency_phone = "+213 555 12 34 56";
+    $agency_wa    = "213555123456";
+    $param_res = $conn->query("SELECT `valeur` FROM `parametres` WHERE `cle` = 'agence_telephone' LIMIT 1");
+    if ($param_res && $p_row = $param_res->fetch_assoc()) {
+        $agency_phone = $p_row['valeur'];
+        $agency_wa = preg_replace('/[^0-9]/', '', $agency_phone);
+    }
+
+    $wa_msg = urlencode("Bonjour Immolode, je vous contacte au sujet du bien : {$titre} (Réf: {$property['reference']}) affiché à {$prix}. Est-il toujours disponible ?");
+} else {
+    $pageTitle = 'Bien introuvable — Imolode';
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -24,164 +110,310 @@ $pageTitle = $property ? htmlspecialchars($property['title']) . ' — Imolode' :
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
   <link rel="modulepreload" href="/client/includes/scripts.js">
-  <link rel="modulepreload" href="/client/data/properties.js">
+  <link rel="modulepreload" href="/assets/js/forms.js">
 </head>
 <body>
   <div id="header-slot"></div>
 
   <main class="property-detail">
     <div class="container">
-      <div id="property-root"></div>
+      <?php if (!$property): ?>
+        <!-- Cas où le bien n'existe pas en base de données -->
+        <div style="padding:120px 0;text-align:center">
+          <h1 class="section-title">Bien introuvable</h1>
+          <p class="text-muted" style="margin-bottom: 24px;">Ce bien n'existe pas ou n'est plus disponible à la vente ou à la location.</p>
+          <a class="btn btn-primary" href="/client/biens.php">Retour au catalogue des biens</a>
+        </div>
+      <?php else: ?>
+        <!-- Fil d'Ariane -->
+        <nav class="property-breadcrumb" aria-label="Fil d'Ariane">
+          <a href="/client/">Accueil</a><span>/</span>
+          <a href="/client/biens.php">Nos biens</a><span>/</span>
+          <span><?= e($titre) ?></span>
+        </nav>
+
+        <!-- En-tête du bien (Titre, localisation, prix, statut) -->
+        <header class="property-hero">
+          <div class="property-hero-main">
+            <h1 class="property-title"><?= e($titre) ?></h1>
+            <p class="property-location">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span><?= e($full_location) ?></span>
+            </p>
+          </div>
+
+          <div class="property-hero-side">
+            <p class="property-transaction"><?= $trans ?> · <span class="badge"><?= e($statut) ?></span></p>
+            <p class="property-price"><?= $prix ?></p>
+          </div>
+        </header>
+
+        <!-- Corps principal de la fiche bien -->
+        <div class="property-layout">
+          
+          <!-- Colonne gauche : Galerie, Caractéristiques, Description, Équipements, Biens similaires -->
+          <div class="property-content">
+            
+            <!-- Galerie photo interactive -->
+            <div class="gallery" data-gallery>
+              <div class="gallery-stage">
+                <img class="gallery-main" data-gallery-main src="<?= e($images[0]) ?>" alt="<?= e($titre) ?>" data-index="0">
+
+                <button type="button" class="gallery-nav gallery-nav--prev" data-gallery-prev aria-label="Photo précédente">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <button type="button" class="gallery-nav gallery-nav--next" data-gallery-next aria-label="Photo suivante">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+                <button type="button" class="gallery-expand" data-gallery-open aria-label="Agrandir en plein écran">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                </button>
+                <span class="gallery-counter" data-gallery-counter>1 / <?= count($images) ?></span>
+              </div>
+
+              <!-- Miniatures cliquables -->
+              <?php if (count($images) > 1): ?>
+                <div class="gallery-thumbs" data-gallery-thumbs>
+                  <?php foreach ($images as $index => $imgUrl): ?>
+                    <button type="button" class="gallery-thumb <?= $index === 0 ? 'is-active' : '' ?>" data-gallery-thumb data-index="<?= $index ?>" aria-label="Photo <?= $index + 1 ?>">
+                      <img src="<?= e($imgUrl) ?>" alt="Photo <?= $index + 1 ?>" loading="lazy">
+                    </button>
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
+
+              <!-- Fenêtre plein écran (Lightbox) -->
+              <div class="lightbox" data-lightbox hidden>
+                <button type="button" class="lightbox-close" data-lightbox-close aria-label="Fermer">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+                <button type="button" class="lightbox-nav lightbox-nav--prev" data-gallery-prev aria-label="Photo précédente">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <img class="lightbox-image" data-lightbox-image src="" alt="<?= e($titre) ?>">
+                <button type="button" class="lightbox-nav lightbox-nav--next" data-gallery-next aria-label="Photo suivante">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Caractéristiques techniques -->
+            <section style="margin-top: 40px;">
+              <h2 class="section-title" style="font-size:1.35rem">Caractéristiques</h2>
+              <div class="property-specs">
+                <?php foreach ($specs as [$lbl, $val]): ?>
+                  <div class="property-spec">
+                    <span class="property-spec-label"><?= e($lbl) ?></span>
+                    <span class="property-spec-value"><?= e((string)$val) ?></span>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </section>
+
+            <!-- Description détaillée -->
+            <section style="margin-top: 40px;">
+              <h2 class="section-title" style="font-size:1.35rem">Description</h2>
+              <div class="property-description is-clamped" id="property-description">
+                <?= nl2br(e($property['description'] ?? 'Aucune description fournie.')) ?>
+              </div>
+              <button type="button" class="btn btn-ghost property-description-toggle" id="toggle-description" style="margin-top: 12px;">
+                Afficher plus
+              </button>
+            </section>
+
+            <!-- Équipements et commodités -->
+            <?php if (!empty($equipements)): ?>
+              <section class="property-features" style="margin-top: 40px;">
+                <h2 class="section-title" style="font-size:1.35rem">Équipements & Prestations</h2>
+                <ul class="features-list">
+                  <?php foreach ($equipements as $equip): ?>
+                    <li class="feature-item">
+                      <span class="feature-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                      <span class="feature-label"><?= e($equip) ?></span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </section>
+            <?php endif; ?>
+
+            <!-- Localisation -->
+            <section style="margin-top: 40px;">
+              <h2 class="section-title" style="font-size:1.35rem">Localisation</h2>
+              <p class="text-muted" style="margin-bottom:16px"><?= e($full_location) ?></p>
+              <div class="map-placeholder" style="background:var(--color-surface);border:1px solid var(--color-border-soft);border-radius:var(--radius-md);height:260px;display:flex;align-items:center;justify-content:center;color:var(--color-muted);">
+                Secteur : <?= e($property['commune'] . ' (' . $property['wilaya'] . ')') ?>
+              </div>
+            </section>
+
+            <!-- Biens similaires recommandés -->
+            <?php if ($similar_result && $similar_result->num_rows > 0): ?>
+              <section style="margin-top: 50px;">
+                <h2 class="section-title" style="font-size:1.35rem; margin-bottom: 24px;">Biens similaires</h2>
+                <div class="property-grid">
+                  <?php while ($sim = $similar_result->fetch_assoc()): ?>
+                    <?php render_property_card($sim); ?>
+                  <?php endwhile; ?>
+                </div>
+              </section>
+            <?php endif; ?>
+
+          </div>
+
+          <!-- Colonne droite : Panneau de contact de l'agence -->
+          <aside class="contact-panel">
+            <h3>Contacter l'agence</h3>
+            <p>Nos conseillers sont à votre disposition pour organiser une visite ou répondre à vos questions.</p>
+
+            <div class="contact-actions" style="margin-bottom: 24px;">
+              <a href="tel:<?= e($agency_phone) ?>" class="btn btn-outline btn-block">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span>Appeler l'agence</span>
+              </a>
+
+              <a href="https://wa.me/<?= e($agency_wa) ?>?text=<?= $wa_msg ?>" target="_blank" rel="noopener" class="btn btn-outline btn-block">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                <span>Discuter sur WhatsApp</span>
+              </a>
+            </div>
+
+            <hr class="divider" style="margin: 20px 0; border: 0; border-top: 1px solid var(--color-border-soft);">
+
+            <!-- Formulaire de demande d'information -->
+            <form class="contact-form contact-form--compact" data-contact-form novalidate>
+              <div class="form-head">
+                <h3 class="form-title">Envoyer une demande</h3>
+                <p class="form-context">Réf : <?= e($property['reference']) ?></p>
+              </div>
+
+              <input type="hidden" name="bien_id" value="<?= $id ?>">
+              <input type="hidden" name="subject" value="Demande d'information — <?= e($titre) ?> (Réf: <?= e($property['reference']) ?>)">
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Nom</span>
+                  <input name="lastname" type="text" required placeholder="Votre nom">
+                </label>
+                <label class="form-field">
+                  <span>Prénom</span>
+                  <input name="firstname" type="text" required placeholder="Votre prénom">
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>Téléphone</span>
+                  <input name="phone" type="tel" required placeholder="05 XX XX XX XX">
+                </label>
+                <label class="form-field">
+                  <span>Email</span>
+                  <input name="email" type="email" placeholder="votre@email.com">
+                </label>
+              </div>
+
+              <label class="form-field">
+                <span>Message</span>
+                <textarea name="message" rows="4" required placeholder="Je souhaite avoir plus de renseignements sur ce bien ou organiser une visite...">Bonjour, je souhaite avoir plus de précisions sur ce bien (<?= e($titre) ?> - Réf: <?= e($property['reference']) ?>) et éventuellement convenir d'une visite. Merci.</textarea>
+              </label>
+
+              <button type="submit" class="btn btn-primary btn-block">
+                <span>Envoyer ma demande</span>
+              </button>
+
+              <p class="form-note">Vos données restent strictement confidentielles et ne sont transmises à aucun tiers.</p>
+
+              <div class="form-feedback" data-form-feedback hidden style="padding:12px;background:#EBF7EE;color:#186A3B;border-radius:6px;font-size:0.9rem;margin-top:10px;">
+                Merci, votre demande a bien été enregistrée. Un conseiller vous contactera dans les plus brefs délais.
+              </div>
+            </form>
+
+          </aside>
+
+        </div>
+      <?php endif; ?>
     </div>
   </main>
 
   <div id="footer-slot"></div>
 
+  <!-- Scripts d'animation de la galerie et de soumission de formulaire -->
   <script type="module">
     import { initPage } from '/client/includes/scripts.js';
     import { initForms } from '/assets/js/forms.js';
-    import { initGallery } from '/assets/js/gallery.js';
-    import { PropertyGallery } from '/assets/components/property-gallery.js';
-    import { PropertyFeatures } from '/assets/components/property-features.js';
-    import { ContactForm } from '/assets/components/contact-form.js';
-    import { PropertyCard } from '/assets/components/property-card.js';
-    import { PROPERTIES } from '/client/data/properties.js';
-    import {
-      getPropertyId, formatPropertyPrice, formatLocation, formatSurface,
-      icon, telLink, whatsappLink, propertyWhatsAppMessage, escapeHTML
-    } from '/client/includes/helpers.js';
 
-    const id = getPropertyId();
-    let property = PROPERTIES.find((p) => String(p.id) === String(id));
+    await initPage({ page: 'biens', title: '<?= addslashes($pageTitle) ?>' });
+    initForms();
 
-    // Si non trouvé en cache local, tentative de chargement direct depuis l'API PHP
-    if (!property && id) {
-      try {
-        const res = await fetch(`/api/properties.php?id=${encodeURIComponent(id)}`);
-        if (res.ok) {
-          property = await res.json();
+    // Galerie photo interactive
+    const images = <?= json_encode($images ?? []) ?>;
+    if (images.length > 0) {
+      const root = document.querySelector('[data-gallery]');
+      if (root) {
+        const main = root.querySelector('[data-gallery-main]');
+        const thumbs = root.querySelectorAll('[data-gallery-thumb]');
+        const counter = root.querySelector('[data-gallery-counter]');
+        const lightbox = root.querySelector('[data-lightbox]');
+        const lightboxImage = root.querySelector('[data-lightbox-image]');
+        let index = 0;
+
+        const update = (next) => {
+          index = (next + images.length) % images.length;
+          if (main) {
+            main.style.opacity = '0';
+            setTimeout(() => {
+              main.src = images[index];
+              main.style.opacity = '1';
+            }, 80);
+          }
+          if (lightboxImage && !lightbox.hidden) {
+            lightboxImage.src = images[index];
+          }
+          if (counter) {
+            counter.textContent = `${index + 1} / ${images.length}`;
+          }
+          thumbs.forEach((t, i) => t.classList.toggle('is-active', i === index));
+        };
+
+        thumbs.forEach((btn, i) => btn.addEventListener('click', () => update(i)));
+
+        root.querySelectorAll('[data-gallery-prev]').forEach(b => {
+          b.addEventListener('click', () => update(index - 1));
+        });
+        root.querySelectorAll('[data-gallery-next]').forEach(b => {
+          b.addEventListener('click', () => update(index + 1));
+        });
+
+        const openBtn = root.querySelector('[data-gallery-open]');
+        if (openBtn && lightbox) {
+          openBtn.addEventListener('click', () => {
+            lightbox.hidden = false;
+            lightboxImage.src = images[index];
+          });
         }
-      } catch (_) {}
+
+        const closeBtn = root.querySelector('[data-lightbox-close]');
+        if (closeBtn && lightbox) {
+          closeBtn.addEventListener('click', () => {
+            lightbox.hidden = true;
+          });
+        }
+        if (lightbox) {
+          lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) lightbox.hidden = true;
+          });
+        }
+      }
     }
 
-    if (!property) {
-      await initPage({ page: 'biens', title: 'Bien introuvable' });
-      document.getElementById('property-root').innerHTML = `
-        <div style="padding:120px 0;text-align:center">
-          <h1 class="section-title">Bien introuvable</h1>
-          <p class="text-muted">Ce bien n'existe pas ou n'est plus disponible.</p>
-          <a class="btn btn-primary" href="/client/biens">Retour aux biens</a>
-        </div>`;
-    } else {
-      await initPage({
-        page: 'biens',
-        title: property.title,
-        description: `${property.type} à ${property.transaction === 'Louer' ? 'louer' : 'vendre'} à ${property.location.city}.`
+    // Gestion du bouton "Afficher plus" pour la description
+    const desc = document.getElementById('property-description');
+    const toggle = document.getElementById('toggle-description');
+    if (desc && toggle) {
+      toggle.addEventListener('click', () => {
+        const clamped = desc.classList.toggle('is-clamped');
+        toggle.textContent = clamped ? 'Afficher plus' : 'Afficher moins';
       });
-
-      const specs = [
-        ['Surface', property.surface ? formatSurface(property.surface) : null],
-        ['Surface du terrain', property.landSurface ? formatSurface(property.landSurface) : null],
-        ['Chambres', property.bedrooms || null],
-        ['Salles de bain', property.bathrooms || null],
-        ['Garage', property.garage ? 'Oui' : 'Non'],
-        ['Étage', property.floor != null ? String(property.floor) : null],
-        ["Nombre d'étages", property.floors || null],
-        ['Année de construction', property.year || null]
-      ].filter(([, v]) => v != null && v !== '');
-
-      const similar = PROPERTIES
-        .filter((p) => p.id !== property.id && p.transaction === property.transaction && p.type === property.type)
-        .slice(0, 3);
-      const fallback = similar.length ? similar : PROPERTIES.filter((p) => p.id !== property.id).slice(0, 3);
-
-      document.getElementById('property-root').innerHTML = `
-        <nav class="property-breadcrumb">
-          <a href="/client/">Accueil</a><span>/</span>
-          <a href="/client/biens">Nos biens</a><span>/</span>
-          <span>${escapeHTML(property.title)}</span>
-        </nav>
-
-        <header class="property-hero">
-          <div class="property-hero-main">
-            <h1 class="property-title">${escapeHTML(property.title)}</h1>
-            <p class="property-location">${icon('pin', { size: 16 })}<span>${escapeHTML(formatLocation(property.location, { full: true }))}</span></p>
-          </div>
-          <div class="property-hero-side">
-            <p class="property-transaction">${property.transaction === 'Louer' ? 'À louer' : 'À vendre'} · ${escapeHTML(property.status)}</p>
-            <p class="property-price">${formatPropertyPrice(property)}</p>
-          </div>
-        </header>
-
-        <div class="property-layout">
-          <div class="property-content">
-            ${PropertyGallery(property.images, { title: property.title })}
-
-            <section>
-              <h2 class="section-title" style="font-size:1.3rem">Caractéristiques</h2>
-              <div class="property-specs">
-                ${specs.map(([label, value]) => `
-                  <div class="property-spec">
-                    <span class="property-spec-label">${escapeHTML(label)}</span>
-                    <span class="property-spec-value">${escapeHTML(String(value))}</span>
-                  </div>`).join('')}
-              </div>
-            </section>
-
-            <section>
-              <h2 class="section-title" style="font-size:1.3rem">Description</h2>
-              <p class="property-description is-clamped" id="property-description">${escapeHTML(property.description)}</p>
-              <button type="button" class="btn btn-ghost property-description-toggle" id="toggle-description">Afficher plus</button>
-            </section>
-
-            ${PropertyFeatures(property.features)}
-
-            <section>
-              <h2 class="section-title" style="font-size:1.3rem">Localisation</h2>
-              <p class="text-muted" style="margin-bottom:16px">
-                ${escapeHTML(formatLocation(property.location, { full: true }))}
-              </p>
-              <div class="map-placeholder">Carte interactive</div>
-            </section>
-
-            ${fallback.length ? `
-              <section>
-                <h2 class="section-title" style="font-size:1.3rem">Vous pourriez également aimer</h2>
-                <div class="property-grid">
-                  ${fallback.map(PropertyCard).join('')}
-                </div>
-              </section>` : ''}
-          </div>
-
-          <aside class="contact-panel">
-            <h3>Contacter l'agence</h3>
-            <p>Un conseiller vous répond dans la journée.</p>
-            <div class="contact-actions">
-              <a href="${telLink()}" class="btn btn-outline btn-block">${icon('phone', { size: 16 })}<span>Appeler</span></a>
-              <a href="${whatsappLink(propertyWhatsAppMessage(property))}" target="_blank" rel="noopener" class="btn btn-outline btn-block">${icon('whatsapp', { size: 16 })}<span>WhatsApp</span></a>
-            </div>
-            <hr class="divider">
-            ${ContactForm({
-              title: 'Envoyer une demande',
-              subject: `Demande d'information — ${property.title}`,
-              contextLabel: property.title,
-              compact: true
-            })}
-          </aside>
-        </div>
-      `;
-
-      initGallery(property.images);
-      initForms();
-
-      const desc = document.getElementById('property-description');
-      const toggle = document.getElementById('toggle-description');
-      if (desc && toggle) {
-        toggle.addEventListener('click', () => {
-          const clamped = desc.classList.toggle('is-clamped');
-          toggle.textContent = clamped ? 'Afficher plus' : 'Afficher moins';
-        });
-      }
     }
   </script>
 </body>

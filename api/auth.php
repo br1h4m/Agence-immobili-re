@@ -1,65 +1,140 @@
 <?php
-// api/auth.php
+/**
+ * ============================================================================
+ * api/auth.php - Authentification de l'administration
+ * ============================================================================
+ * Requêtes MySQL préparées avec MySQLi (sans PDO).
+ * Gestion simple des sessions PHP pour sécuriser le tableau de bord.
+ */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../backend/bootstrap.php';
+require_once __DIR__ . '/../backend/db.php';
 
-use Immolode\Helpers\Response;
-use Immolode\Helpers\Auth;
-use Immolode\Models\User;
+// Gestion de session PHP native
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-Response::handlePreflight();
+// Entêtes CORS et format JSON
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-switch ($method) {
-    case 'GET':
-        // Vérification de la session active
-        $user = Auth::user();
-        Response::json([
-            'authenticated' => (bool) $user,
-            'user'          => $user
-        ]);
-        break;
+// Récupération des données POST (JSON ou formulaire standard)
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true) ?: $_POST;
 
-    case 'POST':
-        $input = Response::getJsonInput();
-        if (empty($input)) {
-            $input = $_POST;
-        }
+try {
+    switch ($method) {
+        // --------------------------------------------------------------------
+        // 1. GET : Vérification si une session admin est déjà active
+        // --------------------------------------------------------------------
+        case 'GET':
+            if (!empty($_SESSION['admin_user'])) {
+                echo json_encode([
+                    'authenticated' => true,
+                    'user' => $_SESSION['admin_user']
+                ]);
+            } else {
+                echo json_encode([
+                    'authenticated' => false,
+                    'user' => null
+                ]);
+            }
+            break;
 
-        if ($action === 'logout') {
-            Auth::logout();
-            Response::success(null, 'Déconnexion effectuée.');
-        }
+        // --------------------------------------------------------------------
+        // 2. POST : Connexion ou déconnexion
+        // --------------------------------------------------------------------
+        case 'POST':
+            // Déconnexion
+            if ($action === 'logout') {
+                unset($_SESSION['admin_user']);
+                session_destroy();
+                echo json_encode(['success' => true, 'message' => 'Déconnexion réussie']);
+                exit;
+            }
 
-        // Login
-        $email = trim((string) ($input['email'] ?? ''));
-        $password = (string) ($input['password'] ?? '');
+            // Tentative de connexion
+            $email = trim((string)($input['email'] ?? ''));
+            $password = (string)($input['password'] ?? '');
 
-        if (empty($email) || empty($password)) {
-            Response::error('Veuillez renseigner votre email et mot de passe.', 422);
-        }
+            if (empty($email) || empty($password)) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'error' => 'Veuillez saisir votre email et mot de passe']);
+                exit;
+            }
 
-        // Cas pratique : si l'admin tape 'admin' et 'admin', on mappe vers le compte de test
-        if ($email === 'admin' && $password === 'admin') {
-            $email = 'admin@immolode.dz';
-            $password = 'admin123';
-        }
+            // Raccourci pratique pour l'environnement local : si on entre "admin" et "admin"
+            if ($email === 'admin' && $password === 'admin') {
+                $email = 'admin@immolode.dz';
+                $password = 'admin123';
+            }
 
-        $user = User::authenticate($email, $password);
-        if (!$user) {
-            Response::error('Identifiants incorrects. Veuillez réessayer.', 401);
-        }
+            // Recherche de l'utilisateur dans la table `utilisateurs` via MySQLi préparé
+            $cleanEmail = strtolower($email);
+            $stmt = $conn->prepare("SELECT * FROM `utilisateurs` WHERE LOWER(`email`) = ? AND `actif` = 1 LIMIT 1");
+            $stmt->bind_param("s", $cleanEmail);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $user = $result->fetch_assoc();
 
-        Auth::login($user);
-        Response::success([
-            'user'  => $user,
-            'token' => session_id()
-        ], 'Connexion réussie.');
-        break;
+            if (!$user) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Identifiants incorrects ou compte inactif']);
+                exit;
+            }
 
-    default:
-        Response::error('Méthode non autorisée.', 405);
+            // Vérification du mot de passe hashé
+            $valid = password_verify($password, $user['mot_de_passe']);
+            // Fallback mot de passe en clair pour test si non encore hashé
+            if (!$valid && $password === $user['mot_de_passe']) {
+                $valid = true;
+            }
+
+            if (!$valid) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Mot de passe incorrect']);
+                exit;
+            }
+
+            // Session validée
+            unset($user['mot_de_passe']); // Sécurité : on retire le mot de passe
+            $_SESSION['admin_user'] = [
+                'id' => $user['id'],
+                'nom' => $user['nom'],
+                'email' => $user['email'],
+                'role' => $user['role'],
+                'poste' => $user['poste'] ?? 'Gestionnaire'
+            ];
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Connexion réussie',
+                'user' => $_SESSION['admin_user'],
+                'data' => [
+                    'user' => $_SESSION['admin_user'],
+                    'token' => session_id()
+                ],
+                'token' => session_id()
+            ]);
+            break;
+
+        default:
+            http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
+            break;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }

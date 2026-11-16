@@ -1,15 +1,27 @@
 <?php
-// client/index.php
+/**
+ * ============================================================================
+ * client/index.php - Page d'accueil Immolode
+ * ============================================================================
+ * Les annonces à la une sont désormais récupérées dynamiquement depuis la
+ * base de données MySQL via une requête préparée (MySQLi sans PDO).
+ */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../backend/bootstrap.php';
+require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/includes/card.php';
+
+// Requête MySQL préparée pour récupérer les annonces "À la une"
+$stmt = $conn->prepare("SELECT * FROM `properties` WHERE `a_la_une` = 1 AND `statut` = 'Disponible' ORDER BY `date_creation` DESC LIMIT 6");
+$stmt->execute();
+$featured_biens = $stmt->get_result();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Imolode — Agence immobilière</title>
+  <title>Imolode — Agence Immobilière Agréée</title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,6 +39,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
   <main>
     <div id="hero-slot"></div>
 
+    <!-- Section Biens à la une (Tirée directement de la base MySQL) -->
     <section class="section">
       <div class="container">
         <header class="section-head reveal">
@@ -34,9 +47,21 @@ require_once __DIR__ . '/../backend/bootstrap.php';
           <h2 class="section-title">Biens à la une</h2>
           <p class="section-lead">Une sélection de propriétés récemment mises en ligne par nos conseillers.</p>
         </header>
-        <div id="featured-properties"></div>
+
+        <div class="property-grid">
+          <?php if ($featured_biens->num_rows === 0): ?>
+            <p style="grid-column: 1 / -1; text-align: center; color: var(--color-muted); padding: 40px 0;">
+              Aucun bien à la une disponible pour le moment.
+            </p>
+          <?php else: ?>
+            <?php while ($bien = $featured_biens->fetch_assoc()): ?>
+              <?php render_property_card($bien); ?>
+            <?php endwhile; ?>
+          <?php endif; ?>
+        </div>
+
         <div style="text-align:center;margin-top:40px">
-          <a class="btn btn-outline" href="/client/biens">Voir tous les biens</a>
+          <a class="btn btn-outline" href="/client/biens.php">Voir tous les biens</a>
         </div>
       </div>
     </section>
@@ -60,7 +85,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
         </header>
         <div id="services-grid" class="property-grid"></div>
         <div style="text-align:center;margin-top:40px">
-          <a class="btn btn-outline" href="/client/services">Découvrir nos services</a>
+          <a class="btn btn-outline" href="/client/services.php">Découvrir nos services</a>
         </div>
       </div>
     </section>
@@ -80,7 +105,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
               exigence sur la qualité des biens présentés font la différence.
             </p>
             <div id="stats-grid" class="stats-grid" style="margin:24px 0 32px"></div>
-            <a class="btn btn-outline" href="/client/a-propos">En savoir plus</a>
+            <a class="btn btn-outline" href="/client/a-propos.php">En savoir plus</a>
           </div>
         </div>
       </div>
@@ -96,9 +121,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
     import { initForms } from '/assets/js/forms.js';
     import { Hero } from '/assets/components/hero.js';
     import { CTASection } from '/assets/components/cta-section.js';
-    import { PropertyGrid } from '/assets/components/property-grid.js';
     import { ServiceCard } from '/assets/components/service-card.js';
-    import { PROPERTIES } from '/client/data/properties.js';
     import { SERVICES } from '/client/data/services.js';
     import { CONFIG } from '/client/data/config.js';
     import { icon } from '/client/includes/helpers.js';
@@ -114,9 +137,6 @@ require_once __DIR__ . '/../backend/bootstrap.php';
 
     document.getElementById('hero-slot').innerHTML = Hero();
     document.getElementById('cta-slot').innerHTML = CTASection();
-
-    const featured = PROPERTIES.filter((p) => p.isFeatured).slice(0, 6);
-    document.getElementById('featured-properties').innerHTML = PropertyGrid(featured);
 
     document.getElementById('services-grid').innerHTML =
       SERVICES.map(ServiceCard).join('');
