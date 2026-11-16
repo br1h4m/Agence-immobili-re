@@ -1,0 +1,142 @@
+<?php
+// client/index.php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../backend/bootstrap.php';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imolode — Agence immobilière</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/component.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+  <link rel="modulepreload" href="/client/includes/scripts.js">
+  <link rel="modulepreload" href="/assets/components/hero.js">
+  <link rel="modulepreload" href="/assets/components/search-bar.js">
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <div id="hero-slot"></div>
+
+    <section class="section">
+      <div class="container">
+        <header class="section-head reveal">
+          <span class="section-eyebrow">Sélection</span>
+          <h2 class="section-title">Biens à la une</h2>
+          <p class="section-lead">Une sélection de propriétés récemment mises en ligne par nos conseillers.</p>
+        </header>
+        <div id="featured-properties"></div>
+        <div style="text-align:center;margin-top:40px">
+          <a class="btn btn-outline" href="/client/biens">Voir tous les biens</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--soft">
+      <div class="container">
+        <header class="section-head section-head--center reveal">
+          <span class="section-eyebrow">Notre approche</span>
+          <h2 class="section-title">Pourquoi nous choisir</h2>
+        </header>
+        <div id="reasons-grid" class="reasons-grid reveal"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <header class="section-head reveal">
+          <span class="section-eyebrow">Services</span>
+          <h2 class="section-title">Ce que nous faisons</h2>
+          <p class="section-lead">Un accompagnement complet, de la recherche à la remise des clés.</p>
+        </header>
+        <div id="services-grid" class="property-grid"></div>
+        <div style="text-align:center;margin-top:40px">
+          <a class="btn btn-outline" href="/client/services">Découvrir nos services</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--soft">
+      <div class="container">
+        <div class="split">
+          <div class="split-media reveal">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" alt="" loading="lazy">
+          </div>
+          <div class="split-body reveal">
+            <span class="section-eyebrow">À propos</span>
+            <h2 class="section-title" style="margin-top:8px">Une agence proche de ses clients</h2>
+            <p class="text-muted">
+              Imolode accompagne depuis plusieurs années des familles, des investisseurs et des
+              entreprises dans leurs projets immobiliers. Notre connaissance du terrain et notre
+              exigence sur la qualité des biens présentés font la différence.
+            </p>
+            <div id="stats-grid" class="stats-grid" style="margin:24px 0 32px"></div>
+            <a class="btn btn-outline" href="/client/a-propos">En savoir plus</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="cta-slot"></div>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from '/client/includes/scripts.js';
+    import { initForms } from '/assets/js/forms.js';
+    import { Hero } from '/assets/components/hero.js';
+    import { CTASection } from '/assets/components/cta-section.js';
+    import { PropertyGrid } from '/assets/components/property-grid.js';
+    import { ServiceCard } from '/assets/components/service-card.js';
+    import { PROPERTIES } from '/client/data/properties.js';
+    import { SERVICES } from '/client/data/services.js';
+    import { CONFIG } from '/client/data/config.js';
+    import { icon } from '/client/includes/helpers.js';
+
+    await initPage({ page: 'accueil', title: 'Accueil' });
+
+    const statsSlot = document.getElementById('stats-grid');
+    if (statsSlot && CONFIG.STATS) {
+      statsSlot.innerHTML = CONFIG.STATS.map((s) => `
+        <div class="stat"><p class="stat-value">${s.value}</p><p class="stat-label">${s.label}</p></div>
+      `).join('');
+    }
+
+    document.getElementById('hero-slot').innerHTML = Hero();
+    document.getElementById('cta-slot').innerHTML = CTASection();
+
+    const featured = PROPERTIES.filter((p) => p.isFeatured).slice(0, 6);
+    document.getElementById('featured-properties').innerHTML = PropertyGrid(featured);
+
+    document.getElementById('services-grid').innerHTML =
+      SERVICES.map(ServiceCard).join('');
+
+    const reasons = [
+      { icon: 'compass', title: 'Expertise locale', text: "Une connaissance fine du marché et des quartiers sur lesquels nous opérons." },
+      { icon: 'star', title: 'Biens sélectionnés', text: "Chaque propriété est visitée et vérifiée avant sa mise en ligne." },
+      { icon: 'users', title: 'Accompagnement', text: "Un conseiller dédié, du premier contact jusqu'à la concrétisation du projet." },
+      { icon: 'shield', title: 'Relation de confiance', text: "Une communication claire, transparente et sans engagement." }
+    ];
+    document.getElementById('reasons-grid').innerHTML = reasons.map((r) => `
+      <article class="reason reveal">
+        <span class="reason-icon">${icon(r.icon, { size: 22 })}</span>
+        <h3 class="reason-title">${r.title}</h3>
+        <p class="reason-text">${r.text}</p>
+      </article>`).join('');
+
+    initForms();
+
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
+  </script>
+</body>
+</html>

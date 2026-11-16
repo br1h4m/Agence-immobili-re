@@ -429,6 +429,18 @@ function getInitialProperties() {
       }
       localStorage.setItem('immo_properties', JSON.stringify(DEFAULT_PROPERTIES));
     } catch (_) {}
+
+    // Synchronisation en arrière-plan avec l'API REST PHP
+    try {
+      fetch('/api/properties.php')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            localStorage.setItem('immo_properties', JSON.stringify(data));
+          }
+        })
+        .catch(() => {});
+    } catch (_) {}
   }
   return DEFAULT_PROPERTIES;
 }

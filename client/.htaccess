@@ -1,10 +1,16 @@
 RewriteEngine On
 RewriteBase /client/
 
-# Fiche d'un bien : /client/bien/12 -> /client/bien.html?id=12
-RewriteRule ^bien/([0-9]+)/?$ bien.html?id=$1 [QSA,L]
+# Fiche d'un bien : /client/bien/12 -> bien.php?id=12
+RewriteRule ^bien/([0-9]+)/?$ bien.php?id=$1 [QSA,L]
 
-# URLs propres : /client/biens -> /client/biens.html
+# URLs propres PHP : /client/biens -> /client/biens.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L,QSA]
+
+# URLs propres HTML : /client/biens -> /client/biens.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.html -f

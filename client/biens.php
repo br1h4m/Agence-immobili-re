@@ -1,0 +1,112 @@
+<?php
+// client/biens.php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../backend/bootstrap.php';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nos biens — Imolode</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/component.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+  <link rel="modulepreload" href="/client/includes/scripts.js">
+  <link rel="modulepreload" href="/assets/components/search-bar.js">
+  <link rel="modulepreload" href="/assets/components/property-filters.js">
+  <link rel="modulepreload" href="/assets/js/filters.js">
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1 class="section-title">Nos biens</h1>
+        <p class="section-lead">Découvrez notre sélection de propriétés disponibles à la vente et à la location.</p>
+        <div id="search-slot" style="margin: 32px auto 0; max-width: 920px; text-align: left;"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div id="biens-layout" style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:40px;align-items:start">
+          <div id="filters-slot"></div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+              <p id="properties-count" style="margin:0;color:var(--color-muted)"></p>
+              <label style="display:inline-flex;align-items:center;gap:8px;font-size:.88rem">
+                <span class="text-muted">Trier par</span>
+                <select id="properties-sort" style="width:auto">
+                  <option value="recent">Plus récents</option>
+                  <option value="price-asc">Prix croissant</option>
+                  <option value="price-desc">Prix décroissant</option>
+                  <option value="surface-asc">Surface croissante</option>
+                  <option value="surface-desc">Surface décroissante</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="properties-results"></div>
+
+            <div style="text-align:center;margin-top:40px">
+              <button id="properties-load-more" class="btn btn-outline" hidden>Charger plus de biens</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary filters-open-btn" data-filters-open>
+          Filtres
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from '/client/includes/scripts.js';
+    import { SearchBar } from '/assets/components/search-bar.js';
+    import { PropertyFilters } from '/assets/components/property-filters.js';
+    import { initBiensPage, getFilterOptions, readStateFromURL } from '/assets/js/filters.js';
+
+    await initPage({ page: 'biens', title: 'Nos biens' });
+
+    const initialState = readStateFromURL();
+    const searchSlot = document.getElementById('search-slot');
+    if (searchSlot) {
+      searchSlot.innerHTML = SearchBar({ compact: true, values: initialState });
+    }
+
+    const { wilayas, cities } = getFilterOptions();
+    document.getElementById('filters-slot').innerHTML = PropertyFilters({ wilayas, cities });
+
+    initBiensPage();
+
+    const adjustLayout = () => {
+      const layout = document.getElementById('biens-layout');
+      if (!layout) return;
+      layout.style.gridTemplateColumns = window.innerWidth <= 640
+        ? '1fr'
+        : '280px minmax(0,1fr)';
+    };
+    adjustLayout();
+    window.addEventListener('resize', adjustLayout);
+
+    const observer = new MutationObserver(() => {
+      const isOpen = document.querySelector('[data-filters]')?.classList.contains('is-open');
+      document.documentElement.classList.toggle('no-scroll', Boolean(isOpen));
+    });
+    observer.observe(document.querySelector('[data-filters]') || document.body, {
+      attributes: true, subtree: true, attributeFilter: ['class']
+    });
+  </script>
+</body>
+</html>

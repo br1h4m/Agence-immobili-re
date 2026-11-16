@@ -1,0 +1,188 @@
+<?php
+// client/bien.php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../backend/bootstrap.php';
+
+use Immolode\Models\Property;
+
+$id = $_GET['id'] ?? null;
+$property = $id ? Property::getById($id) : null;
+$pageTitle = $property ? htmlspecialchars($property['title']) . ' — Imolode' : 'Détail du bien — Imolode';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= $pageTitle ?></title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/component.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+  <link rel="modulepreload" href="/client/includes/scripts.js">
+  <link rel="modulepreload" href="/client/data/properties.js">
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main class="property-detail">
+    <div class="container">
+      <div id="property-root"></div>
+    </div>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from '/client/includes/scripts.js';
+    import { initForms } from '/assets/js/forms.js';
+    import { initGallery } from '/assets/js/gallery.js';
+    import { PropertyGallery } from '/assets/components/property-gallery.js';
+    import { PropertyFeatures } from '/assets/components/property-features.js';
+    import { ContactForm } from '/assets/components/contact-form.js';
+    import { PropertyCard } from '/assets/components/property-card.js';
+    import { PROPERTIES } from '/client/data/properties.js';
+    import {
+      getPropertyId, formatPropertyPrice, formatLocation, formatSurface,
+      icon, telLink, whatsappLink, propertyWhatsAppMessage, escapeHTML
+    } from '/client/includes/helpers.js';
+
+    const id = getPropertyId();
+    let property = PROPERTIES.find((p) => String(p.id) === String(id));
+
+    // Si non trouvé en cache local, tentative de chargement direct depuis l'API PHP
+    if (!property && id) {
+      try {
+        const res = await fetch(`/api/properties.php?id=${encodeURIComponent(id)}`);
+        if (res.ok) {
+          property = await res.json();
+        }
+      } catch (_) {}
+    }
+
+    if (!property) {
+      await initPage({ page: 'biens', title: 'Bien introuvable' });
+      document.getElementById('property-root').innerHTML = `
+        <div style="padding:120px 0;text-align:center">
+          <h1 class="section-title">Bien introuvable</h1>
+          <p class="text-muted">Ce bien n'existe pas ou n'est plus disponible.</p>
+          <a class="btn btn-primary" href="/client/biens">Retour aux biens</a>
+        </div>`;
+    } else {
+      await initPage({
+        page: 'biens',
+        title: property.title,
+        description: `${property.type} à ${property.transaction === 'Louer' ? 'louer' : 'vendre'} à ${property.location.city}.`
+      });
+
+      const specs = [
+        ['Surface', property.surface ? formatSurface(property.surface) : null],
+        ['Surface du terrain', property.landSurface ? formatSurface(property.landSurface) : null],
+        ['Chambres', property.bedrooms || null],
+        ['Salles de bain', property.bathrooms || null],
+        ['Garage', property.garage ? 'Oui' : 'Non'],
+        ['Étage', property.floor != null ? String(property.floor) : null],
+        ["Nombre d'étages", property.floors || null],
+        ['Année de construction', property.year || null]
+      ].filter(([, v]) => v != null && v !== '');
+
+      const similar = PROPERTIES
+        .filter((p) => p.id !== property.id && p.transaction === property.transaction && p.type === property.type)
+        .slice(0, 3);
+      const fallback = similar.length ? similar : PROPERTIES.filter((p) => p.id !== property.id).slice(0, 3);
+
+      document.getElementById('property-root').innerHTML = `
+        <nav class="property-breadcrumb">
+          <a href="/client/">Accueil</a><span>/</span>
+          <a href="/client/biens">Nos biens</a><span>/</span>
+          <span>${escapeHTML(property.title)}</span>
+        </nav>
+
+        <header class="property-hero">
+          <div class="property-hero-main">
+            <h1 class="property-title">${escapeHTML(property.title)}</h1>
+            <p class="property-location">${icon('pin', { size: 16 })}<span>${escapeHTML(formatLocation(property.location, { full: true }))}</span></p>
+          </div>
+          <div class="property-hero-side">
+            <p class="property-transaction">${property.transaction === 'Louer' ? 'À louer' : 'À vendre'} · ${escapeHTML(property.status)}</p>
+            <p class="property-price">${formatPropertyPrice(property)}</p>
+          </div>
+        </header>
+
+        <div class="property-layout">
+          <div class="property-content">
+            ${PropertyGallery(property.images, { title: property.title })}
+
+            <section>
+              <h2 class="section-title" style="font-size:1.3rem">Caractéristiques</h2>
+              <div class="property-specs">
+                ${specs.map(([label, value]) => `
+                  <div class="property-spec">
+                    <span class="property-spec-label">${escapeHTML(label)}</span>
+                    <span class="property-spec-value">${escapeHTML(String(value))}</span>
+                  </div>`).join('')}
+              </div>
+            </section>
+
+            <section>
+              <h2 class="section-title" style="font-size:1.3rem">Description</h2>
+              <p class="property-description is-clamped" id="property-description">${escapeHTML(property.description)}</p>
+              <button type="button" class="btn btn-ghost property-description-toggle" id="toggle-description">Afficher plus</button>
+            </section>
+
+            ${PropertyFeatures(property.features)}
+
+            <section>
+              <h2 class="section-title" style="font-size:1.3rem">Localisation</h2>
+              <p class="text-muted" style="margin-bottom:16px">
+                ${escapeHTML(formatLocation(property.location, { full: true }))}
+              </p>
+              <div class="map-placeholder">Carte interactive</div>
+            </section>
+
+            ${fallback.length ? `
+              <section>
+                <h2 class="section-title" style="font-size:1.3rem">Vous pourriez également aimer</h2>
+                <div class="property-grid">
+                  ${fallback.map(PropertyCard).join('')}
+                </div>
+              </section>` : ''}
+          </div>
+
+          <aside class="contact-panel">
+            <h3>Contacter l'agence</h3>
+            <p>Un conseiller vous répond dans la journée.</p>
+            <div class="contact-actions">
+              <a href="${telLink()}" class="btn btn-outline btn-block">${icon('phone', { size: 16 })}<span>Appeler</span></a>
+              <a href="${whatsappLink(propertyWhatsAppMessage(property))}" target="_blank" rel="noopener" class="btn btn-outline btn-block">${icon('whatsapp', { size: 16 })}<span>WhatsApp</span></a>
+            </div>
+            <hr class="divider">
+            ${ContactForm({
+              title: 'Envoyer une demande',
+              subject: `Demande d'information — ${property.title}`,
+              contextLabel: property.title,
+              compact: true
+            })}
+          </aside>
+        </div>
+      `;
+
+      initGallery(property.images);
+      initForms();
+
+      const desc = document.getElementById('property-description');
+      const toggle = document.getElementById('toggle-description');
+      if (desc && toggle) {
+        toggle.addEventListener('click', () => {
+          const clamped = desc.classList.toggle('is-clamped');
+          toggle.textContent = clamped ? 'Afficher plus' : 'Afficher moins';
+        });
+      }
+    }
+  </script>
+</body>
+</html>

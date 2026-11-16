@@ -1,6 +1,6 @@
 // admin/data/admin-store.js
-// MODULE ES NAVIGATEUR — gestion de la persistance locale (localStorage).
-// DONNEES MOCKEES - A SUPPRIMER quand le backend sera pret
+// MODULE ES NAVIGATEUR — gestion de l'état administrateur connectée au Backend PHP.
+// Persistance réelle via l'API REST PHP (/api/...) avec cache de synchronisation locale.
 
 import { PROPERTIES } from '/client/data/properties.js';
 import { TEAM } from '/client/data/team.js';
@@ -14,7 +14,7 @@ const KEY_SETTINGS = 'immo_settings';
 
 const INITIAL_FICHES_CLIENT = [
   {
-    id: 1727720001,
+    id: 1,
     reference: 'IML-DOS-2026-1042',
     nom: 'Benali',
     prenom: 'Karim',
@@ -34,7 +34,7 @@ const INITIAL_FICHES_CLIENT = [
     createdAt: '2026-10-14T09:30:00Z'
   },
   {
-    id: 1727720002,
+    id: 2,
     reference: 'IML-DOS-2026-1043',
     nom: 'Amrani',
     prenom: 'Samira',
@@ -52,32 +52,12 @@ const INITIAL_FICHES_CLIENT = [
     engagementAccepte: true,
     status: 'En cours',
     createdAt: '2026-10-13T15:20:00Z'
-  },
-  {
-    id: 1727720003,
-    reference: 'IML-DOS-2026-1044',
-    nom: 'Meziani',
-    prenom: 'Sofiane',
-    telephone: '0770 45 67 89',
-    email: 'sofiane.meziani@yahoo.fr',
-    transaction: 'Demande',
-    typeBien: 'Commerce',
-    pieceIdentite: {
-      name: 'registre_commerce_cni.pdf',
-      size: 820000,
-      type: 'application/pdf',
-      dataUrl: null
-    },
-    signature: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M 25 55 Q 80 15 120 45 T 175 35" fill="none" stroke="%231C1C1C" stroke-width="2.5"/></svg>',
-    engagementAccepte: true,
-    status: 'Validé',
-    createdAt: '2026-10-12T11:10:00Z'
   }
 ];
 
 const INITIAL_DEMANDES = [
   {
-    id: 1727710001,
+    id: 1,
     type: 'Contact',
     nom: 'Nadir Mansouri',
     email: 'nadir.mansouri@gmail.com',
@@ -88,7 +68,7 @@ const INITIAL_DEMANDES = [
     createdAt: '2026-09-30T10:15:00Z'
   },
   {
-    id: 1727710002,
+    id: 2,
     type: 'Estimation',
     nom: 'Farida Ould Ali',
     email: 'farida.ouldali@yahoo.fr',
@@ -110,7 +90,7 @@ const INITIAL_DEMANDES = [
     createdAt: '2026-09-29T14:30:00Z'
   },
   {
-    id: 1727710003,
+    id: 3,
     type: 'Contact',
     nom: 'Rachid Belkacem',
     email: 'rachid.belkacem@pro-dz.com',
@@ -119,28 +99,6 @@ const INITIAL_DEMANDES = [
     message: "Nous sommes a la recherche d'une surface de bureau d'au moins 100 m² a Bejaia centre pour installer notre societe.",
     status: 'Traite',
     createdAt: '2026-09-28T09:00:00Z'
-  },
-  {
-    id: 1727710004,
-    type: 'Estimation',
-    nom: 'Youcef Khellaf',
-    email: 'youcef.khellaf@gmail.com',
-    phone: '+213 555 88 99 00',
-    subject: 'Estimation : Villa a Bejaia',
-    message: 'Villa R+1 avec jardin et vue degagee sur le golfe de Bejaia.',
-    details: {
-      type: 'Villa',
-      wilaya: 'Bejaia',
-      commune: 'Bejaia',
-      quartier: 'Targa Ouzemmour',
-      surface: '220',
-      land: '350',
-      bedrooms: '5',
-      bathrooms: '3',
-      garage: 'Oui'
-    },
-    status: 'Nouveau',
-    createdAt: '2026-09-30T16:45:00Z'
   }
 ];
 
@@ -148,22 +106,7 @@ function readStorage(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
-      const data = JSON.parse(raw);
-      // Nettoie automatiquement les anciennes données obsolètes (faux noms ou numéros XX)
-      if (key === KEY_USERS && Array.isArray(data)) {
-        const hasOutdatedData = data.some((u) => !u.nom || u.nom.includes('Benali') || String(u.phone).includes('XX'));
-        if (hasOutdatedData) {
-          localStorage.setItem(key, JSON.stringify(fallback));
-          return fallback;
-        }
-      }
-      if (key === KEY_SETTINGS && data) {
-        if (!data.phone || data.phone.includes('34 12') || data.email?.includes('Imolode.dz')) {
-          localStorage.setItem(key, JSON.stringify(fallback));
-          return fallback;
-        }
-      }
-      return data;
+      return JSON.parse(raw);
     }
     localStorage.setItem(key, JSON.stringify(fallback));
     return fallback;
@@ -177,6 +120,39 @@ function writeStorage(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (_) {}
 }
+
+/**
+ * Synchronise les données locales avec l'API PHP en arrière-plan
+ */
+export async function syncWithBackend() {
+  try {
+    const [resProps, resDemandes, resFiches, resSettings] = await Promise.all([
+      fetch('/api/properties.php').then(r => r.ok ? r.json() : null),
+      fetch('/api/demandes.php').then(r => r.ok ? r.json() : null),
+      fetch('/api/fiches-client.php').then(r => r.ok ? r.json() : null),
+      fetch('/api/settings.php').then(r => r.ok ? r.json() : null)
+    ]);
+
+    if (Array.isArray(resProps) && resProps.length > 0) {
+      writeStorage(KEY_PROPERTIES, resProps);
+    }
+    if (Array.isArray(resDemandes) && resDemandes.length > 0) {
+      writeStorage(KEY_DEMANDES, resDemandes);
+    }
+    if (Array.isArray(resFiches) && resFiches.length > 0) {
+      writeStorage(KEY_FICHES_CLIENT, resFiches);
+    }
+    if (resSettings && typeof resSettings === 'object') {
+      writeStorage(KEY_SETTINGS, resSettings);
+    }
+  } catch (err) {
+    // Mode dégradé si serveur injoignable
+    console.debug('Synchronisation API PHP en arrière-plan différée.');
+  }
+}
+
+// Déclenche une synchronisation initiale
+syncWithBackend();
 
 /* ==========================================================================
    Biens immobiliers
@@ -256,6 +232,25 @@ export function saveProperty(propertyData) {
   }
 
   writeStorage(KEY_PROPERTIES, list);
+
+  // Envoi asynchrone au backend PHP
+  try {
+    const isUpdate = Boolean(propertyData.id);
+    fetch('/api/properties.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...updated,
+        action: isUpdate ? 'update' : 'create'
+      })
+    }).then(r => r.json()).then(res => {
+      if (res?.data?.id) {
+        // Met à jour l'ID si le serveur en a généré un nouveau
+        syncWithBackend();
+      }
+    }).catch(() => {});
+  } catch (_) {}
+
   return updated;
 }
 
@@ -263,6 +258,12 @@ export function deleteProperty(id) {
   const list = readStorage(KEY_PROPERTIES, PROPERTIES);
   const filtered = list.filter((p) => String(p.id) !== String(id));
   writeStorage(KEY_PROPERTIES, filtered);
+
+  // Envoi asynchrone au backend PHP
+  try {
+    fetch(`/api/properties.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+  } catch (_) {}
+
   return filtered.length !== list.length;
 }
 
@@ -272,6 +273,16 @@ export function updatePropertyStatus(id, newStatus) {
   if (item) {
     item.status = newStatus;
     writeStorage(KEY_PROPERTIES, list);
+
+    // Envoi asynchrone au backend PHP
+    try {
+      fetch('/api/properties.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'status', id, status: newStatus })
+      }).catch(() => {});
+    } catch (_) {}
+
     return true;
   }
   return false;
@@ -342,6 +353,15 @@ export function updateDemandeStatus(id, newStatus) {
   if (ficheItem) {
     ficheItem.status = newStatus;
     writeStorage(KEY_FICHES_CLIENT, fiches);
+
+    try {
+      fetch('/api/fiches-client.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'status', id, status: newStatus })
+      }).catch(() => {});
+    } catch (_) {}
+
     return true;
   }
 
@@ -351,6 +371,15 @@ export function updateDemandeStatus(id, newStatus) {
   if (item) {
     item.status = newStatus;
     writeStorage(KEY_DEMANDES, demandes);
+
+    try {
+      fetch('/api/demandes.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'status', id, status: newStatus })
+      }).catch(() => {});
+    } catch (_) {}
+
     return true;
   }
   return false;
@@ -364,6 +393,9 @@ export function deleteDemande(id) {
   if (fichesFiltered.length !== fiches.length) {
     writeStorage(KEY_FICHES_CLIENT, fichesFiltered);
     changed = true;
+    try {
+      fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+    } catch (_) {}
   }
 
   const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
@@ -371,6 +403,9 @@ export function deleteDemande(id) {
   if (demandesFiltered.length !== demandes.length) {
     writeStorage(KEY_DEMANDES, demandesFiltered);
     changed = true;
+    try {
+      fetch(`/api/demandes.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+    } catch (_) {}
   }
 
   return changed;
@@ -436,6 +471,15 @@ export function saveFicheClient(data) {
   }
 
   writeStorage(KEY_FICHES_CLIENT, list);
+
+  try {
+    fetch('/api/fiches-client.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    }).catch(() => {});
+  } catch (_) {}
+
   return updated;
 }
 
@@ -445,6 +489,15 @@ export function updateFicheClientStatus(id, newStatus) {
   if (item) {
     item.status = newStatus;
     writeStorage(KEY_FICHES_CLIENT, list);
+
+    try {
+      fetch('/api/fiches-client.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'status', id, status: newStatus })
+      }).catch(() => {});
+    } catch (_) {}
+
     return true;
   }
   return false;
@@ -454,6 +507,11 @@ export function deleteFicheClient(id) {
   const list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
   const filtered = list.filter((f) => String(f.id) !== String(id));
   writeStorage(KEY_FICHES_CLIENT, filtered);
+
+  try {
+    fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+  } catch (_) {}
+
   return filtered.length !== list.length;
 }
 
@@ -494,6 +552,15 @@ export function saveUser(userData) {
   }
 
   writeStorage(KEY_USERS, list);
+
+  try {
+    fetch('/api/users.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    }).catch(() => {});
+  } catch (_) {}
+
   return updated;
 }
 
@@ -501,6 +568,11 @@ export function deleteUser(id) {
   const list = getUsers();
   const filtered = list.filter((u) => String(u.id) !== String(id));
   writeStorage(KEY_USERS, filtered);
+
+  try {
+    fetch(`/api/users.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+  } catch (_) {}
+
   return filtered.length !== list.length;
 }
 
@@ -530,6 +602,15 @@ export function saveSettings(data) {
   const current = getSettings();
   const updated = { ...current, ...data };
   writeStorage(KEY_SETTINGS, updated);
+
+  try {
+    fetch('/api/settings.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    }).catch(() => {});
+  } catch (_) {}
+
   return updated;
 }
 

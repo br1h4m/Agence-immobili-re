@@ -1246,27 +1246,39 @@
         sigSlot.innerHTML = '<span>Signature électronique validée</span>';
       }
 
-      // Enregistrement persistant dans le store local pour l'espace administration
+      // Enregistrement dans le backend PHP et stockage local de secours
+      const fichePayload = {
+        reference: dossierRef,
+        nom: nomInput.value.trim(),
+        prenom: prenomInput.value.trim(),
+        telephone: telInput.value.trim(),
+        email: emailInput.value.trim(),
+        transaction: checkedTransaction.value,
+        typeBien: checkedBien.value,
+        pieceIdentite: {
+          name: currentFile.name,
+          size: currentFile.size,
+          type: currentFile.type,
+          dataUrl: currentFileDataUrl
+        },
+        signature: signatureDataUrl,
+        engagementAccepte: true,
+        status: 'Nouveau'
+      };
+
+      try {
+        fetch('/api/fiches-client.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fichePayload)
+        }).catch(() => {});
+      } catch (_) {}
+
       try {
         const stored = JSON.parse(localStorage.getItem('immo_fiches_client') || '[]');
         stored.unshift({
+          ...fichePayload,
           id: Date.now(),
-          reference: dossierRef,
-          nom: nomInput.value.trim(),
-          prenom: prenomInput.value.trim(),
-          telephone: telInput.value.trim(),
-          email: emailInput.value.trim(),
-          transaction: checkedTransaction.value,
-          typeBien: checkedBien.value,
-          pieceIdentite: {
-            name: currentFile.name,
-            size: currentFile.size,
-            type: currentFile.type,
-            dataUrl: currentFileDataUrl
-          },
-          signature: signatureDataUrl,
-          engagementAccepte: true,
-          status: 'Nouveau',
           createdAt: new Date().toISOString()
         });
         localStorage.setItem('immo_fiches_client', JSON.stringify(stored));

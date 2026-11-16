@@ -1,0 +1,149 @@
+<?php
+// client/contact.php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../backend/bootstrap.php';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact — Imolode</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/component.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+  <link rel="modulepreload" href="/client/includes/scripts.js">
+  <link rel="modulepreload" href="/assets/js/forms.js">
+</head>
+<body>
+  <div id="header-slot"></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1 class="section-title">Contact</h1>
+        <p class="section-lead">Une question, un projet ? Notre équipe vous répond dans les plus brefs délais.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Carte de visite officielle -->
+        <div id="business-card-slot"></div>
+
+        <div class="contact-grid" style="margin-top:40px">
+          <div class="contact-info">
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-user"></span>
+              <div>
+                <p class="contact-info-label">Direction</p>
+                <p class="contact-info-value" id="val-manager"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-phone"></span>
+              <div>
+                <p class="contact-info-label">Mobile</p>
+                <p class="contact-info-value" id="val-phone"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-mail"></span>
+              <div>
+                <p class="contact-info-label">Email</p>
+                <p class="contact-info-value" id="val-mail"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-pin"></span>
+              <div>
+                <p class="contact-info-label">Adresse</p>
+                <p class="contact-info-value" id="val-address"></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-fb"></span>
+              <div>
+                <p class="contact-info-label">Facebook</p>
+                <p class="contact-info-value"><a id="val-fb" target="_blank" rel="noopener"></a></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-wa"></span>
+              <div>
+                <p class="contact-info-label">WhatsApp</p>
+                <p class="contact-info-value"><a id="val-wa">Discuter sur WhatsApp</a></p>
+              </div>
+            </div>
+            <div class="contact-info-item">
+              <span class="contact-info-icon" id="ico-clock"></span>
+              <div>
+                <p class="contact-info-label">Horaires</p>
+                <p class="contact-info-value" id="val-hours"></p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="contact-form-slot"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:64px">
+          <div class="map-placeholder">Carte interactive</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-slot"></div>
+
+  <script type="module">
+    import { initPage } from '/client/includes/scripts.js';
+    import { initForms } from '/assets/js/forms.js';
+    import { ContactForm } from '/assets/components/contact-form.js';
+    import { BusinessCard } from '/assets/components/business-card.js';
+    import { CONFIG } from '/client/data/config.js';
+    import { icon, telLink, whatsappLink, escapeHTML } from '/client/includes/helpers.js';
+
+    await initPage({ page: 'contact', title: 'Contact' });
+
+    document.getElementById('business-card-slot').innerHTML = BusinessCard();
+
+    document.getElementById('ico-user').innerHTML = icon('user', { size: 20 });
+    document.getElementById('ico-phone').innerHTML = icon('phone', { size: 20 });
+    document.getElementById('ico-mail').innerHTML = icon('mail', { size: 20 });
+    document.getElementById('ico-pin').innerHTML = icon('pin', { size: 20 });
+    document.getElementById('ico-fb').innerHTML = icon('facebook', { size: 20 });
+    document.getElementById('ico-wa').innerHTML = icon('whatsapp', { size: 20 });
+    document.getElementById('ico-clock').innerHTML = icon('clock', { size: 20 });
+
+    document.getElementById('val-manager').innerHTML = `<strong>${escapeHTML(CONFIG.MANAGER)}</strong>, ${escapeHTML(CONFIG.MANAGER_ROLE)}`;
+    document.getElementById('val-phone').innerHTML = `<a href="${telLink()}">${escapeHTML(CONFIG.PHONE)}</a>`;
+    document.getElementById('val-mail').innerHTML = `<a href="mailto:${CONFIG.EMAIL}">${escapeHTML(CONFIG.EMAIL)}</a>`;
+    document.getElementById('val-address').textContent = CONFIG.ADDRESS;
+    document.getElementById('val-hours').textContent = CONFIG.HOURS;
+
+    const fb = document.getElementById('val-fb');
+    fb.href = CONFIG.SOCIAL.facebook;
+    fb.textContent = CONFIG.SOCIAL.facebookLabel;
+
+    const wa = document.getElementById('val-wa');
+    wa.href = whatsappLink('Bonjour, je souhaite avoir des informations.');
+    wa.target = '_blank';
+    wa.rel = 'noopener';
+
+    document.getElementById('contact-form-slot').innerHTML = ContactForm({
+      title: 'Nous écrire',
+      contextLabel: 'Un conseiller vous répond sous 24 h.'
+    });
+
+    initForms();
+  </script>
+</body>
+</html>

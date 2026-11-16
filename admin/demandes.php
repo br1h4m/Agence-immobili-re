@@ -1,0 +1,49 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../backend/bootstrap.php';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demandes & Estimations — Administration Imolode</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/admin/assets/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <div id="sidebar-slot"></div>
+
+    <div class="admin-main-wrap">
+      <div id="topbar-slot"></div>
+
+      <main class="admin-content" id="demandes-content">
+        <div style="padding: 40px; text-align: center; color: var(--admin-text-muted);">
+          Chargement des demandes...
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Volet latéral de consultation d'une demande -->
+  <div class="admin-drawer" id="demande-drawer" aria-hidden="true"></div>
+  <div class="sidebar-backdrop" id="drawer-backdrop"></div>
+
+  <!-- Lightbox d'inspection haute résolution pour pièces d'identité -->
+  <div class="admin-lightbox" id="image-lightbox" hidden>
+    <div class="admin-lightbox-content">
+      <button type="button" class="admin-lightbox-close" id="lightbox-close" aria-label="Fermer l'aperçu">×</button>
+      <img src="" alt="Pièce d'identité" id="lightbox-img" class="admin-lightbox-img">
+      <div class="admin-lightbox-caption" id="lightbox-caption"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/admin/demandes.js"></script>
+</body>
+</html>
+
+

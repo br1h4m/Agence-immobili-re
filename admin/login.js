@@ -17,7 +17,7 @@ if (!redirectIfAuth()) {
     emailInput.focus();
   });
 
-  form?.addEventListener('submit', (e) => {
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     alertSlot.innerHTML = '';
 
@@ -32,7 +32,7 @@ if (!redirectIfAuth()) {
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Connexion en cours...';
 
-    const result = login(email, password);
+    const result = await login(email, password);
 
     if (result.success) {
       // Redirection
