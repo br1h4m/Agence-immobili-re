@@ -11,7 +11,8 @@ require_once __DIR__ . '/../backend/bootstrap.php';
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap"></noscript>
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
@@ -650,7 +651,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
   </style>
 </head>
 <body>
-  <div id="header-slot"></div>
+  <?php $activePage = 'fiche-client'; include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <section class="page-hero">
@@ -926,7 +927,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
     </section>
   </main>
 
-  <div id="footer-slot"></div>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
   <script type="module">
     import { initPage } from '/client/includes/scripts.js';

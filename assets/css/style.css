@@ -204,8 +204,8 @@ label { display: block; }
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
 
-/* Reveal animation */
-.reveal { opacity: 0; transform: translateY(14px); transition: opacity 600ms ease, transform 600ms ease; }
+/* Reveal animation : visible par défaut pour un chargement instantané sans écran blanc */
+.reveal { opacity: 1; transform: none; transition: opacity 350ms ease, transform 350ms ease; }
 .reveal.is-visible { opacity: 1; transform: none; }
 
 @media (prefers-reduced-motion: reduce) {

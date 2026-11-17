@@ -15,9 +15,17 @@ function render_property_card(array $p): void {
     $url = "/client/bien.php?id={$id}";
     $trans = ($p['transaction'] ?? '') === 'Louer' ? 'À louer' : 'À vendre';
     
-    // Décodage des images (JSON ou fallback)
+    // Décodage des images (JSON ou fallback optimisé)
     $images = json_decode($p['images'] ?? '[]', true) ?: [];
-    $cover = !empty($images[0]) ? $images[0] : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80';
+    $rawCover = !empty($images[0]) ? $images[0] : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=75';
+
+    // Optimisation automatique du poids des images Unsplash pour un chargement rapide
+    if (str_contains($rawCover, 'images.unsplash.com')) {
+        $cover = preg_replace('/w=\d+/', 'w=600', $rawCover);
+        $cover = preg_replace('/q=\d+/', 'q=75', $cover);
+    } else {
+        $cover = $rawCover;
+    }
 
     // Localisation
     $loc = e($p['commune'] ?? '');

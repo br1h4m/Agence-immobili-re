@@ -4,12 +4,14 @@
  * client/biens.php - Catalogue et recherche des biens immobiliers
  * ============================================================================
  * Requêtes MySQL préparées simples avec MySQLi (sans PDO).
- * Affichage direct des annonces stockées dans la base de données immolode.
+ * Rendu direct côté serveur pour un affichage instantané et haute performance.
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/includes/card.php';
+
+$activePage = 'biens';
 
 // ----------------------------------------------------------------------------
 // 1. Récupération et assainissement des paramètres GET
@@ -155,7 +157,7 @@ if ($types_res) {
     }
 }
 if (empty($available_types)) {
-    $available_types = ['Appartement', 'Villa', 'Maison', 'Terrain', 'Local', 'Bureau'];
+    $available_types = ['Appartement', 'Villa', 'Duplex', 'Bureau', 'Terrain'];
 }
 
 $available_communes = [];
@@ -171,17 +173,25 @@ if ($communes_res) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nos biens — Imolode</title>
+  <meta name="description" content="Catalogue complet des biens immobiliers disponibles à la vente et à la location.">
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+
+  <!-- Préconnexions et polices non bloquantes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  </noscript>
+
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
-  <link rel="modulepreload" href="/client/includes/scripts.js">
 </head>
 <body>
-  <div id="header-slot"></div>
+
+  <!-- En-tête PHP natif -->
+  <?php include __DIR__ . '/includes/header.php'; ?>
 
   <main>
     <!-- Bannière Hero avec barre de recherche rapide -->
@@ -374,7 +384,7 @@ if ($communes_res) {
               </form>
             </div>
 
-            <!-- Grille des annonces immobilières -->
+            <!-- Grille des annonces immobilières générée directement en PHP -->
             <div class="property-grid">
               <?php if (empty($biens)): ?>
                 <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border-soft);">
@@ -399,40 +409,34 @@ if ($communes_res) {
     </section>
   </main>
 
-  <div id="footer-slot"></div>
+  <!-- Pied de page PHP natif -->
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
-  <!-- Scripts d'en-tête, pied de page et gestion mobile des filtres -->
-  <script type="module">
-    import { initPage } from '/client/includes/scripts.js';
+  <!-- Scripts légers pour l'interaction mobile et layout -->
+  <script>
+    (function() {
+      // Ajustement responsive fluide
+      function adjustLayout() {
+        var layout = document.getElementById('biens-layout');
+        if (layout) {
+          layout.style.gridTemplateColumns = window.innerWidth <= 768 ? '1fr' : '280px minmax(0,1fr)';
+        }
+      }
+      adjustLayout();
+      window.addEventListener('resize', adjustLayout, { passive: true });
 
-    await initPage({ page: 'biens', title: 'Nos biens — Imolode' });
+      // Tiroir mobile des filtres
+      var aside = document.getElementById('filters-aside');
+      var openBtn = document.getElementById('filters-open-btn');
+      var closeBtn = document.getElementById('filters-close-btn');
 
-    // Gestion de l'affichage adaptatif responsive
-    const adjustLayout = () => {
-      const layout = document.getElementById('biens-layout');
-      if (!layout) return;
-      layout.style.gridTemplateColumns = window.innerWidth <= 768
-        ? '1fr'
-        : '280px minmax(0,1fr)';
-    };
-    adjustLayout();
-    window.addEventListener('resize', adjustLayout);
-
-    // Tiroir des filtres en vue mobile
-    const aside = document.getElementById('filters-aside');
-    const openBtn = document.getElementById('filters-open-btn');
-    const closeBtn = document.getElementById('filters-close-btn');
-
-    if (openBtn && aside) {
-      openBtn.addEventListener('click', () => {
-        aside.classList.add('is-open');
-      });
-    }
-    if (closeBtn && aside) {
-      closeBtn.addEventListener('click', () => {
-        aside.classList.remove('is-open');
-      });
-    }
+      if (openBtn && aside) {
+        openBtn.addEventListener('click', function() { aside.classList.add('is-open'); });
+      }
+      if (closeBtn && aside) {
+        closeBtn.addEventListener('click', function() { aside.classList.remove('is-open'); });
+      }
+    })();
   </script>
 </body>
 </html>

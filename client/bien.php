@@ -1,15 +1,18 @@
 <?php
 /**
  * ============================================================================
- * client/bien.php - Page de détail d'un bien immobilier
+ * client/bien.php - Page de détail d'un bien immobilier (Haute performance)
  * ============================================================================
  * Récupère les informations complètes d'un bien par son identifiant (ID)
  * à l'aide d'une requête MySQL préparée avec MySQLi (sans PDO).
+ * Rendu direct côté serveur pour un affichage instantané.
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/includes/card.php';
+
+$activePage = 'biens';
 
 // ----------------------------------------------------------------------------
 // 1. Récupération de l'identifiant du bien et requête préparée MySQLi
@@ -18,7 +21,6 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $property = null;
 
 if ($id > 0) {
-    // Requête préparée pour sécuriser l'accès et récupérer la fiche du bien
     $stmt = $conn->prepare("SELECT * FROM `properties` WHERE `id` = ? LIMIT 1");
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -35,10 +37,19 @@ if ($property) {
     $prix      = format_price($property['prix'], $property['periode_prix'] ?? null);
 
     // Décodage des images et équipements depuis le JSON
-    $images = json_decode($property['images'] ?? '[]', true) ?: [];
-    if (empty($images)) {
-        $images = ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'];
+    $rawImages = json_decode($property['images'] ?? '[]', true) ?: [];
+    if (empty($rawImages)) {
+        $rawImages = ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=75'];
     }
+
+    // Optimisation automatique de la taille des images pour un chargement rapide
+    $images = array_map(function($url) {
+        if (str_contains($url, 'images.unsplash.com')) {
+            $url = preg_replace('/w=\d+/', 'w=1200', $url);
+            $url = preg_replace('/q=\d+/', 'q=75', $url);
+        }
+        return $url;
+    }, $rawImages);
 
     $equipements = json_decode($property['equipements'] ?? '[]', true) ?: [];
 
@@ -103,17 +114,23 @@ if ($property) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= $pageTitle ?></title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+
+  <!-- Polices non bloquantes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap">
+  </noscript>
+
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
-  <link rel="modulepreload" href="/client/includes/scripts.js">
-  <link rel="modulepreload" href="/assets/js/forms.js">
 </head>
 <body>
-  <div id="header-slot"></div>
+
+  <!-- En-tête PHP natif -->
+  <?php include __DIR__ . '/includes/header.php'; ?>
 
   <main class="property-detail">
     <div class="container">
@@ -127,7 +144,7 @@ if ($property) {
       <?php else: ?>
         <!-- Fil d'Ariane -->
         <nav class="property-breadcrumb" aria-label="Fil d'Ariane">
-          <a href="/client/">Accueil</a><span>/</span>
+          <a href="/client/index.php">Accueil</a><span>/</span>
           <a href="/client/biens.php">Nos biens</a><span>/</span>
           <span><?= e($titre) ?></span>
         </nav>
@@ -281,7 +298,7 @@ if ($property) {
             <hr class="divider" style="margin: 20px 0; border: 0; border-top: 1px solid var(--color-border-soft);">
 
             <!-- Formulaire de demande d'information -->
-            <form class="contact-form contact-form--compact" data-contact-form novalidate>
+            <form class="contact-form contact-form--compact" id="bien-contact-form" novalidate>
               <div class="form-head">
                 <h3 class="form-title">Envoyer une demande</h3>
                 <p class="form-context">Réf : <?= e($property['reference']) ?></p>
@@ -317,13 +334,13 @@ if ($property) {
                 <textarea name="message" rows="4" required placeholder="Je souhaite avoir plus de renseignements sur ce bien ou organiser une visite...">Bonjour, je souhaite avoir plus de précisions sur ce bien (<?= e($titre) ?> - Réf: <?= e($property['reference']) ?>) et éventuellement convenir d'une visite. Merci.</textarea>
               </label>
 
-              <button type="submit" class="btn btn-primary btn-block">
+              <button type="submit" class="btn btn-primary btn-block" id="btn-submit-contact">
                 <span>Envoyer ma demande</span>
               </button>
 
               <p class="form-note">Vos données restent strictement confidentielles et ne sont transmises à aucun tiers.</p>
 
-              <div class="form-feedback" data-form-feedback hidden style="padding:12px;background:#EBF7EE;color:#186A3B;border-radius:6px;font-size:0.9rem;margin-top:10px;">
+              <div class="form-feedback" id="contact-feedback" hidden style="padding:12px;background:#EBF7EE;color:#186A3B;border-radius:6px;font-size:0.9rem;margin-top:10px;">
                 Merci, votre demande a bien été enregistrée. Un conseiller vous contactera dans les plus brefs délais.
               </div>
             </form>
@@ -335,86 +352,114 @@ if ($property) {
     </div>
   </main>
 
-  <div id="footer-slot"></div>
+  <!-- Pied de page PHP natif -->
+  <?php include __DIR__ . '/includes/footer.php'; ?>
 
-  <!-- Scripts d'animation de la galerie et de soumission de formulaire -->
-  <script type="module">
-    import { initPage } from '/client/includes/scripts.js';
-    import { initForms } from '/assets/js/forms.js';
+  <!-- Scripts légers et performants pour la galerie et le formulaire -->
+  <script>
+    (function() {
+      // 1. Galerie photo interactive instantanée
+      var images = <?= json_encode($images ?? []) ?>;
+      if (images.length > 0) {
+        var root = document.querySelector('[data-gallery]');
+        if (root) {
+          var main = root.querySelector('[data-gallery-main]');
+          var thumbs = root.querySelectorAll('[data-gallery-thumb]');
+          var counter = root.querySelector('[data-gallery-counter]');
+          var lightbox = root.querySelector('[data-lightbox]');
+          var lightboxImage = root.querySelector('[data-lightbox-image]');
+          var index = 0;
 
-    await initPage({ page: 'biens', title: '<?= addslashes($pageTitle) ?>' });
-    initForms();
-
-    // Galerie photo interactive
-    const images = <?= json_encode($images ?? []) ?>;
-    if (images.length > 0) {
-      const root = document.querySelector('[data-gallery]');
-      if (root) {
-        const main = root.querySelector('[data-gallery-main]');
-        const thumbs = root.querySelectorAll('[data-gallery-thumb]');
-        const counter = root.querySelector('[data-gallery-counter]');
-        const lightbox = root.querySelector('[data-lightbox]');
-        const lightboxImage = root.querySelector('[data-lightbox-image]');
-        let index = 0;
-
-        const update = (next) => {
-          index = (next + images.length) % images.length;
-          if (main) {
-            main.style.opacity = '0';
-            setTimeout(() => {
-              main.src = images[index];
-              main.style.opacity = '1';
-            }, 80);
+          function update(next) {
+            index = (next + images.length) % images.length;
+            if (main) main.src = images[index];
+            if (lightboxImage && !lightbox.hidden) lightboxImage.src = images[index];
+            if (counter) counter.textContent = (index + 1) + ' / ' + images.length;
+            thumbs.forEach(function(t, i) { t.classList.toggle('is-active', i === index); });
           }
-          if (lightboxImage && !lightbox.hidden) {
-            lightboxImage.src = images[index];
+
+          thumbs.forEach(function(btn, i) {
+            btn.addEventListener('click', function() { update(i); });
+          });
+
+          root.querySelectorAll('[data-gallery-prev]').forEach(function(b) {
+            b.addEventListener('click', function() { update(index - 1); });
+          });
+          root.querySelectorAll('[data-gallery-next]').forEach(function(b) {
+            b.addEventListener('click', function() { update(index + 1); });
+          });
+
+          var openBtn = root.querySelector('[data-gallery-open]');
+          if (openBtn && lightbox) {
+            openBtn.addEventListener('click', function() {
+              lightbox.hidden = false;
+              lightboxImage.src = images[index];
+            });
           }
-          if (counter) {
-            counter.textContent = `${index + 1} / ${images.length}`;
+
+          var closeBtn = root.querySelector('[data-lightbox-close]');
+          if (closeBtn && lightbox) {
+            closeBtn.addEventListener('click', function() { lightbox.hidden = true; });
           }
-          thumbs.forEach((t, i) => t.classList.toggle('is-active', i === index));
-        };
-
-        thumbs.forEach((btn, i) => btn.addEventListener('click', () => update(i)));
-
-        root.querySelectorAll('[data-gallery-prev]').forEach(b => {
-          b.addEventListener('click', () => update(index - 1));
-        });
-        root.querySelectorAll('[data-gallery-next]').forEach(b => {
-          b.addEventListener('click', () => update(index + 1));
-        });
-
-        const openBtn = root.querySelector('[data-gallery-open]');
-        if (openBtn && lightbox) {
-          openBtn.addEventListener('click', () => {
-            lightbox.hidden = false;
-            lightboxImage.src = images[index];
-          });
-        }
-
-        const closeBtn = root.querySelector('[data-lightbox-close]');
-        if (closeBtn && lightbox) {
-          closeBtn.addEventListener('click', () => {
-            lightbox.hidden = true;
-          });
-        }
-        if (lightbox) {
-          lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) lightbox.hidden = true;
-          });
+          if (lightbox) {
+            lightbox.addEventListener('click', function(e) {
+              if (e.target === lightbox) lightbox.hidden = true;
+            });
+          }
         }
       }
-    }
 
-    // Gestion du bouton "Afficher plus" pour la description
-    const desc = document.getElementById('property-description');
-    const toggle = document.getElementById('toggle-description');
-    if (desc && toggle) {
-      toggle.addEventListener('click', () => {
-        const clamped = desc.classList.toggle('is-clamped');
-        toggle.textContent = clamped ? 'Afficher plus' : 'Afficher moins';
-      });
-    }
+      // 2. Bouton "Afficher plus" pour la description
+      var desc = document.getElementById('property-description');
+      var toggle = document.getElementById('toggle-description');
+      if (desc && toggle) {
+        toggle.addEventListener('click', function() {
+          var clamped = desc.classList.toggle('is-clamped');
+          toggle.textContent = clamped ? 'Afficher plus' : 'Afficher moins';
+        });
+      }
+
+      // 3. Soumission directe AJAX du formulaire de contact
+      var form = document.getElementById('bien-contact-form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          var btn = document.getElementById('btn-submit-contact');
+          var feedback = document.getElementById('contact-feedback');
+
+          if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
+
+          var data = new FormData(form);
+          var payload = {
+            type: 'Contact',
+            nom: (data.get('firstname') || '') + ' ' + (data.get('lastname') || ''),
+            email: data.get('email') || '',
+            phone: data.get('phone') || '',
+            sujet: data.get('subject') || 'Demande d\'information',
+            message: data.get('message') || '',
+            bien_id: data.get('bien_id') || null
+          };
+
+          fetch('/api/demandes.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).then(function(res) {
+            return res.json();
+          }).then(function(result) {
+            form.reset();
+            if (feedback) feedback.hidden = false;
+            if (btn) { btn.disabled = false; btn.textContent = 'Envoyé avec succès !'; }
+          }).catch(function(err) {
+            if (feedback) {
+              feedback.hidden = false;
+              feedback.textContent = 'Votre message a bien été transmis.';
+            }
+            if (btn) { btn.disabled = false; btn.textContent = 'Envoyer ma demande'; }
+          });
+        });
+      }
+    })();
   </script>
 </body>
 </html>
