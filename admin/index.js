@@ -135,7 +135,9 @@ async function renderDashboard() {
                   ${recentDemandes.map((d) => `
                     <tr>
                       <td>
-                        <strong style="color: var(--admin-text); display: block;">${escapeHTML(d.nom)}</strong>
+                        <a href="/admin/demandes?id=${d.id}" style="color: var(--admin-text); font-weight: 600; display: block;" title="Consulter cette demande">
+                          ${escapeHTML(d.nom)}
+                        </a>
                         <span style="font-size: 0.78rem; color: var(--admin-text-subtle);">${escapeHTML(d.email || d.phone || '')}</span>
                       </td>
                       <td>
@@ -150,7 +152,7 @@ async function renderDashboard() {
                         ${statusBadge(d.status)}
                       </td>
                       <td style="text-align: right;">
-                        <a href="/admin/demandes?id=${d.id}" class="btn-icon" title="Consulter la demande">
+                        <a href="/admin/demandes?id=${d.id}" class="btn-icon" title="Consulter la demande en détail">
                           ${adminIcon('eye', { size: 16 })}
                         </a>
                       </td>
@@ -200,7 +202,7 @@ async function renderDashboard() {
                           <div class="table-property-cell">
                             ${thumb ? `<img src="${escapeHTML(thumb)}" alt="" class="table-thumb" loading="lazy">` : ''}
                             <div>
-                              <a href="/admin/bien-edit?id=${p.id}" class="table-property-title" title="${escapeHTML(p.title)}">
+                              <a href="/admin/biens?id=${p.id}" class="table-property-title" title="Voir l'emplacement dans la liste des biens">
                                 ${escapeHTML(p.title)}
                               </a>
                               <span class="table-property-ref">${escapeHTML(p.reference || '')} · ${escapeHTML(p.location?.city || '')}</span>
@@ -215,10 +217,10 @@ async function renderDashboard() {
                         </td>
                         <td style="text-align: right;">
                           <div class="table-actions" style="justify-content: flex-end;">
-                            <a href="/client/bien?id=${p.id}" target="_blank" rel="noopener" class="btn-icon" title="Voir sur le site public">
-                              ${adminIcon('external', { size: 15 })}
+                            <a href="/client/bien.php?id=${p.id}" target="_blank" rel="noopener" class="btn-icon" title="Consulter l'annonce directe">
+                              ${adminIcon('eye', { size: 16 })}
                             </a>
-                            <a href="/admin/bien-edit?id=${p.id}" class="btn-icon" title="Modifier">
+                            <a href="/admin/bien-edit?id=${p.id}" class="btn-icon" title="Modifier le bien">
                               ${adminIcon('edit', { size: 15 })}
                             </a>
                           </div>
@@ -272,7 +274,9 @@ async function renderDashboard() {
                       <span style="font-size: 0.76rem; font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(f.reference || '')}</span>
                     </td>
                     <td>
-                      <div style="font-weight: 600; color: var(--admin-text);">${escapeHTML(f.nom || '')} ${escapeHTML(f.prenom || '')}</div>
+                      <a href="/admin/fiches-client?id=${f.id}" style="font-weight: 600; color: var(--admin-text); display: block;" title="Consulter ce dossier">
+                        ${escapeHTML(f.nom || '')} ${escapeHTML(f.prenom || '')}
+                      </a>
                       <div style="font-size: 0.78rem; color: var(--admin-text-muted);">${escapeHTML(f.telephone || '')} · ${escapeHTML(f.email || '')}</div>
                     </td>
                     <td>
@@ -285,7 +289,7 @@ async function renderDashboard() {
                       ${statusBadge(f.status || 'Nouveau')}
                     </td>
                     <td style="text-align: right;">
-                      <a href="/admin/fiches-client?id=${f.id}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">
+                      <a href="/admin/fiches-client?id=${f.id}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.78rem;" title="Consulter le dossier officiel">
                         ${adminIcon('eye', { size: 14 })} Consulter
                       </a>
                     </td>

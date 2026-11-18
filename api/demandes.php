@@ -32,9 +32,13 @@ function format_demande_row(array $r): array {
     return array_merge($r, [
         'id'        => (int)$r['id'],
         'status'    => $r['statut'],
+        'statut'    => $r['statut'],
         'phone'     => $r['telephone'],
+        'telephone' => $r['telephone'],
         'subject'   => $r['sujet'],
+        'sujet'     => $r['sujet'],
         'details'   => $details,
+        'is_read'   => (int)($r['is_read'] ?? 0),
         'createdAt' => $r['date_creation']
     ]);
 }
@@ -78,10 +82,74 @@ try {
             break;
 
         // --------------------------------------------------------------------
-        // 2. POST : Enregistrement d'une nouvelle demande (Contact / Estimation)
+        // 2. POST : Enregistrement, statut ou actions de lot
         // --------------------------------------------------------------------
         case 'POST':
             $action = $input['action'] ?? $_GET['action'] ?? '';
+
+            // Marquer comme lu
+            if ($action === 'mark_read') {
+                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+                if ($id > 0) {
+                    $stmt = $conn->prepare("UPDATE `demandes` SET `is_read` = 1 WHERE `id` = ?");
+                    $stmt->bind_param("i", $id);
+                    $stmt->execute();
+                }
+                echo json_encode(['success' => true, 'message' => 'Demande marquée comme lue']);
+                exit;
+            }
+
+            // Marquer comme non lu
+            if ($action === 'mark_unread') {
+                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+                if ($id > 0) {
+                    $stmt = $conn->prepare("UPDATE `demandes` SET `is_read` = 0 WHERE `id` = ?");
+                    $stmt->bind_param("i", $id);
+                    $stmt->execute();
+                }
+                echo json_encode(['success' => true, 'message' => 'Demande marquée comme non lue']);
+                exit;
+            }
+
+            // Suppression multiple (batch delete)
+            if ($action === 'bulk_delete') {
+                $ids = $input['ids'] ?? [];
+                if (is_array($ids) && count($ids) > 0) {
+                    $stmtDel = $conn->prepare("DELETE FROM `demandes` WHERE `id` = ?");
+                    foreach ($ids as $delId) {
+                        $intId = (int)$delId;
+                        if ($intId > 0) {
+                            $stmtDel->bind_param("i", $intId);
+                            $stmtDel->execute();
+                        }
+                    }
+                    echo json_encode(['success' => true, 'count' => count($ids), 'message' => 'Demandes supprimées']);
+                    exit;
+                }
+                http_response_code(422);
+                echo json_encode(['success' => false, 'error' => 'Aucun ID fourni']);
+                exit;
+            }
+
+            // Marquer multiple comme lu
+            if ($action === 'bulk_mark_read') {
+                $ids = $input['ids'] ?? [];
+                if (is_array($ids) && count($ids) > 0) {
+                    $stmtRead = $conn->prepare("UPDATE `demandes` SET `is_read` = 1 WHERE `id` = ?");
+                    foreach ($ids as $rId) {
+                        $intId = (int)$rId;
+                        if ($intId > 0) {
+                            $stmtRead->bind_param("i", $intId);
+                            $stmtRead->execute();
+                        }
+                    }
+                    echo json_encode(['success' => true, 'count' => count($ids), 'message' => 'Demandes marquées comme lues']);
+                    exit;
+                }
+                http_response_code(422);
+                echo json_encode(['success' => false, 'error' => 'Aucun ID fourni']);
+                exit;
+            }
 
             // Modification rapide de statut
             if ($action === 'status') {
@@ -123,8 +191,8 @@ try {
             }
 
             $stmt = $conn->prepare("
-                INSERT INTO `demandes` (`type`, `nom`, `email`, `telephone`, `sujet`, `message`, `details_bien`, `bien_id`, `statut`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Nouveau')
+                INSERT INTO `demandes` (`type`, `nom`, `email`, `telephone`, `sujet`, `message`, `details_bien`, `bien_id`, `statut`, `is_read`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Nouveau', 0)
             ");
             $stmt->bind_param("sssssssi", $type, $nom, $email, $tel, $sujet, $message, $details_bien, $bien_id);
             $stmt->execute();

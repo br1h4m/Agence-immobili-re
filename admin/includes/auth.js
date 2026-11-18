@@ -29,6 +29,14 @@ export function getCurrentUser() {
   return session ? session.user : null;
 }
 
+export function updateLocalUser(updatedUser) {
+  try {
+    const session = getSession() || {};
+    session.user = { ...(session.user || {}), ...updatedUser };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch (_) {}
+}
+
 export function requireAuth() {
   if (!isAuthenticated()) {
     const current = window.location.pathname + window.location.search;

@@ -7,7 +7,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Utilisateurs & Équipe — Administration Imolode</title>
+  <title>Utilisateurs & ï¿½quipe ï¿½ Administration Imolode</title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
