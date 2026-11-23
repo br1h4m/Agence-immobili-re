@@ -35,6 +35,8 @@ function format_demande_row(array $r): array {
         'phone'     => $r['telephone'],
         'subject'   => $r['sujet'],
         'details'   => $details,
+        'is_read'   => (int)($r['is_read'] ?? 0),
+        'isRead'    => (bool)($r['is_read'] ?? 0),
         'createdAt' => $r['date_creation']
     ]);
 }
@@ -87,18 +89,75 @@ try {
             if ($action === 'status') {
                 $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
                 $nouveauStatut = trim((string)($input['status'] ?? $input['statut'] ?? ''));
-
                 if (!$id || empty($nouveauStatut)) {
                     http_response_code(422);
                     echo json_encode(['success' => false, 'error' => 'ID et statut requis']);
                     exit;
                 }
-
                 $stmt = $conn->prepare("UPDATE `demandes` SET `statut` = ? WHERE `id` = ?");
                 $stmt->bind_param("si", $nouveauStatut, $id);
                 $stmt->execute();
-
                 echo json_encode(['success' => true, 'message' => 'Statut mis à jour']);
+                exit;
+            }
+
+            // Marquer comme lu
+            if ($action === 'mark_read') {
+                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+                if (!$id) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'ID requis']);
+                    exit;
+                }
+                $stmt = $conn->prepare("UPDATE `demandes` SET `is_read` = 1 WHERE `id` = ?");
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                echo json_encode(['success' => true, 'message' => 'Demande marquée comme lue']);
+                exit;
+            }
+
+            // Marquer comme non lu
+            if ($action === 'mark_unread') {
+                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+                if (!$id) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'ID requis']);
+                    exit;
+                }
+                $stmt = $conn->prepare("UPDATE `demandes` SET `is_read` = 0 WHERE `id` = ?");
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                echo json_encode(['success' => true, 'message' => 'Demande marquée comme non lue']);
+                exit;
+            }
+
+            // Marquer plusieurs comme lu
+            if ($action === 'bulk_mark_read') {
+                $ids = $input['ids'] ?? [];
+                if (!is_array($ids) || empty($ids)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'Liste des IDs requise']);
+                    exit;
+                }
+                $intIds = array_map('intval', $ids);
+                $inClause = implode(',', $intIds);
+                $conn->query("UPDATE `demandes` SET `is_read` = 1 WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' demande(s) marquée(s) comme lue(s)']);
+                exit;
+            }
+
+            // Suppression multiple
+            if ($action === 'bulk_delete') {
+                $ids = $input['ids'] ?? [];
+                if (!is_array($ids) || empty($ids)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'Liste des IDs requise']);
+                    exit;
+                }
+                $intIds = array_map('intval', $ids);
+                $inClause = implode(',', $intIds);
+                $conn->query("DELETE FROM `demandes` WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' demande(s) supprimée(s)']);
                 exit;
             }
 

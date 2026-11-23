@@ -11,6 +11,21 @@ require_once __DIR__ . '/../backend/db.php';
 
 $activePage = 'a-propos';
 
+// Chargement des paramètres CMS
+$settings = [];
+$resParams = $conn->query("SELECT `cle`, `valeur` FROM `parametres`");
+if ($resParams) {
+    while ($r = $resParams->fetch_assoc()) {
+        $settings[$r['cle']] = $r['valeur'];
+    }
+}
+
+$about_title = !empty($settings['cms_about_title']) ? $settings['cms_about_title'] : 'Une agence fondée sur le terrain';
+$about_text = !empty($settings['cms_about_text']) ? $settings['cms_about_text'] : "Imolode est née de la conviction qu'une transaction immobilière réussie repose avant tout sur la confiance mutuelle. Depuis nos débuts, nous avons construit une méthode claire et sans détour : visiter chaque bien, écouter attentivement chaque projet de vie, et ne proposer que ce qui correspond réellement aux attentes.";
+$about_image = !empty($settings['cms_about_image']) ? $settings['cms_about_image'] : 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=75';
+$about_mission = !empty($settings['cms_about_mission']) ? $settings['cms_about_mission'] : "Cette exigence nous a permis d'accompagner des centaines de familles et d'investisseurs, sur des projets résidentiels comme professionnels, avec un taux de satisfaction exceptionnel.";
+$about_vision = !empty($settings['cms_about_vision']) ? $settings['cms_about_vision'] : "Devenir la référence incontournable de l'immobilier premium et de la gestion de patrimoine en Algérie.";
+
 $values = [
     [
         'title' => 'Rigueur & Conformité',
@@ -34,26 +49,34 @@ $values = [
     ]
 ];
 
-$team = [
-    [
-        'name' => 'G. Hocine',
-        'role' => 'Gérant & Conseiller Principal',
-        'image' => 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=75',
-        'bio' => 'Plus de 12 ans d\'expertise sur le marché immobilier de la région de Béjaïa et Alger.'
-    ],
-    [
-        'name' => 'Karim Benali',
-        'role' => 'Responsable des transactions',
-        'image' => 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=75',
-        'bio' => 'Spécialiste de la valorisation de biens résidentiels et du suivi des dossiers notariés.'
-    ],
-    [
-        'name' => 'Amel Dahmani',
-        'role' => 'Conseillère Location & Gestion',
-        'image' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=75',
-        'bio' => 'Dédiée aux relations locataires-propriétaires, états des lieux et gestion locative.'
-    ]
-];
+// Chargement dynamique des conseillers de l'agence depuis MySQL
+$team = [];
+$team_res = $conn->query("SELECT * FROM `utilisateurs` WHERE `actif` = 1 ORDER BY `id` ASC");
+if ($team_res && $team_res->num_rows > 0) {
+    while ($u = $team_res->fetch_assoc()) {
+        $team[] = [
+            'name' => $u['nom'],
+            'role' => $u['poste'] ?? ($u['role'] ?? 'Conseiller'),
+            'image' => !empty($u['avatar']) ? $u['avatar'] : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=75',
+            'bio' => 'Conseiller immobilier chez Imolode — Tél : ' . ($u['telephone'] ?? '+213 555 12 34 56')
+        ];
+    }
+} else {
+    $team = [
+        [
+            'name' => 'G. Hocine',
+            'role' => 'Gérant & Conseiller Principal',
+            'image' => 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=75',
+            'bio' => 'Plus de 12 ans d\'expertise sur le marché immobilier de la région de Béjaïa et Alger.'
+        ],
+        [
+            'name' => 'Karim Benali',
+            'role' => 'Responsable des transactions',
+            'image' => 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=75',
+            'bio' => 'Spécialiste de la valorisation de biens résidentiels et du suivi des dossiers notariés.'
+        ]
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -94,17 +117,19 @@ $team = [
       <div class="container">
         <div class="split">
           <div class="split-media">
-            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=75" alt="Agence Immolode" loading="lazy">
+            <img src="<?= e($about_image) ?>" alt="Agence Immolode" loading="lazy">
           </div>
           <div class="split-body">
             <span class="section-eyebrow">Notre histoire</span>
-            <h2 class="section-title" style="margin-top:8px">Une agence fondée sur le terrain</h2>
-            <p class="text-muted">
-              Imolode est née de la conviction qu'une transaction immobilière réussie repose avant tout sur la confiance mutuelle. Depuis nos débuts, nous avons construit une méthode claire et sans détour : visiter chaque bien, écouter attentivement chaque projet de vie, et ne proposer que ce qui correspond réellement aux attentes.
-            </p>
-            <p class="text-muted">
-              Cette exigence nous a permis d'accompagner des centaines de familles et d'investisseurs, sur des projets résidentiels comme professionnels, avec un taux de satisfaction exceptionnel.
-            </p>
+            <h2 class="section-title" style="margin-top:8px"><?= e($about_title) ?></h2>
+            <div class="text-muted" style="line-height: 1.7; font-size: 0.95rem;">
+              <?= nl2br(e($about_text)) ?>
+            </div>
+            <?php if (!empty($about_mission)): ?>
+              <div style="margin-top: 16px; padding: 12px 16px; background: rgba(181, 154, 106, 0.08); border-left: 3px solid var(--color-primary); border-radius: 4px; font-size: 0.9rem;">
+                <strong>Notre engagement :</strong> <?= e($about_mission) ?>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
       </div>

@@ -50,6 +50,10 @@ if (empty($wa_num)) $wa_num = '213555123456';
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
+
+  <!-- Leaflet Carte Interactive (OpenStreetMap) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 </head>
 <body>
 
@@ -198,9 +202,8 @@ if (empty($wa_num)) $wa_num = '213555123456';
         </div>
 
         <div style="margin-top:64px">
-          <div class="map-placeholder" style="background:var(--color-surface);border:1px solid var(--color-border-soft);border-radius:var(--radius-md);height:260px;display:flex;align-items:center;justify-content:center;color:var(--color-muted);">
-            Agence Imolode — <?= e($address) ?>
-          </div>
+          <h2 class="section-title" style="font-size:1.35rem; margin-bottom: 16px;">Notre agence à Béjaïa</h2>
+          <div id="contact-map" style="height: 340px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--color-border-soft); z-index: 1;"></div>
         </div>
       </div>
     </section>
@@ -209,9 +212,20 @@ if (empty($wa_num)) $wa_num = '213555123456';
   <!-- Pied de page PHP natif -->
   <?php include __DIR__ . '/includes/footer.php'; ?>
 
-  <!-- Soumission AJAX simple et rapide du formulaire -->
+  <!-- Soumission AJAX simple et carte interactive Leaflet -->
   <script>
     (function() {
+      // 1. Initialisation carte Leaflet du siège Imolode
+      var mapEl = document.getElementById('contact-map');
+      if (mapEl && typeof L !== 'undefined') {
+        var map = L.map('contact-map', { scrollWheelZoom: false }).setView([36.7511, 5.0567], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var marker = L.marker([36.7511, 5.0567]).addTo(map);
+        marker.bindPopup('<strong>Imolode Immobilier</strong><br><?= addslashes(e($address)) ?>').openPopup();
+      }
       var form = document.getElementById('contact-page-form');
       if (form) {
         form.addEventListener('submit', function(e) {

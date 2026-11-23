@@ -141,12 +141,36 @@ $total_count = count($biens);
 // ----------------------------------------------------------------------------
 $wilayas_res = $conn->query("SELECT DISTINCT `wilaya` FROM `properties` WHERE `wilaya` IS NOT NULL AND `wilaya` != '' ORDER BY `wilaya` ASC");
 $types_res   = $conn->query("SELECT DISTINCT `type` FROM `properties` WHERE `type` IS NOT NULL AND `type` != '' ORDER BY `type` ASC");
-$communes_res= $conn->query("SELECT DISTINCT `commune` FROM `properties` WHERE `commune` IS NOT NULL AND `commune` != '' ORDER BY `commune` ASC");
 
 $available_wilayas = [];
 if ($wilayas_res) {
     while ($w = $wilayas_res->fetch_assoc()) {
         $available_wilayas[] = $w['wilaya'];
+    }
+}
+if (empty($available_wilayas)) {
+    $available_wilayas = ['Béjaïa', 'Alger', 'Oran', 'Constantine', 'Sétif'];
+}
+
+$communes_by_wilaya = [
+    'Béjaïa' => ['Béjaïa', 'Tichy', 'Aokas', 'Souk El Ténine', 'Akbou', 'El Kseur', 'Amizour', 'Sidi Aïch', 'Tazmalt', 'Kherrata'],
+    'Alger' => ['Alger Centre', 'Hydra', 'El Biar', 'Ben Aknoun', 'Chéraga', 'Dely Ibrahim', 'Zéralda', 'Staoueli', 'Kouba', 'Bir Mourad Raïs'],
+    'Oran' => ['Oran', 'Bir El Djir', 'Es Senia', 'Ain El Turk', 'Arzew', 'Mers El Kebir', 'Canastel'],
+    'Constantine' => ['Constantine', 'Ali Mendjeli', 'El Khroub', 'Ain Smara'],
+    'Sétif' => ['Sétif', 'El Eulma', 'Ain Arnat', 'Ain Oulmene']
+];
+
+$pairs_res = $conn->query("SELECT DISTINCT `wilaya`, `commune` FROM `properties` WHERE `wilaya` IS NOT NULL AND `commune` IS NOT NULL AND `commune` != '' ORDER BY `commune` ASC");
+if ($pairs_res) {
+    while ($row = $pairs_res->fetch_assoc()) {
+        $w = $row['wilaya'];
+        $c = $row['commune'];
+        if (!isset($communes_by_wilaya[$w])) {
+            $communes_by_wilaya[$w] = [];
+        }
+        if (!in_array($c, $communes_by_wilaya[$w], true)) {
+            $communes_by_wilaya[$w][] = $c;
+        }
     }
 }
 
@@ -160,11 +184,17 @@ if (empty($available_types)) {
     $available_types = ['Appartement', 'Villa', 'Duplex', 'Bureau', 'Terrain'];
 }
 
-$available_communes = [];
-if ($communes_res) {
-    while ($c = $communes_res->fetch_assoc()) {
-        $available_communes[] = $c['commune'];
+if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
+    $available_communes = $communes_by_wilaya[$wilaya];
+} else {
+    $all_communes = [];
+    foreach ($communes_by_wilaya as $cList) {
+        foreach ($cList as $c) {
+            if (!in_array($c, $all_communes, true)) $all_communes[] = $c;
+        }
     }
+    sort($all_communes);
+    $available_communes = $all_communes;
 }
 ?>
 <!DOCTYPE html>
@@ -348,9 +378,9 @@ if ($communes_res) {
                 </select>
               </fieldset>
 
-              <div class="filters-actions">
-                <a href="/client/biens.php" class="btn btn-outline" style="text-align:center;">Réinitialiser</a>
-                <button type="submit" class="btn btn-primary">Filtrer</button>
+              <div class="filters-actions" style="display: flex; gap: 8px;">
+                <a href="/client/biens.php" class="btn btn-outline" style="text-align:center; flex: 1; border-color: #A09A8F; color: var(--color-text);">Réinitialiser</a>
+                <button type="submit" class="btn btn-primary" style="flex: 1; font-weight: 600; box-shadow: 0 2px 8px rgba(181, 154, 106, 0.4); cursor: pointer;">Filtrer</button>
               </div>
             </form>
           </aside>
@@ -435,6 +465,32 @@ if ($communes_res) {
       }
       if (closeBtn && aside) {
         closeBtn.addEventListener('click', function() { aside.classList.remove('is-open'); });
+      }
+      // Liaison dynamique Wilaya -> Communes
+      var communesData = <?= json_encode($communes_by_wilaya, JSON_UNESCAPED_UNICODE) ?>;
+      var wilayaSelect = document.querySelector('#filters-aside select[name="wilaya"]');
+      var citySelect = document.querySelector('#filters-aside select[name="city"]');
+
+      if (wilayaSelect && citySelect) {
+        wilayaSelect.addEventListener('change', function() {
+          var chosenWilaya = this.value;
+          citySelect.innerHTML = '<option value="">Toutes les villes</option>';
+          var list = chosenWilaya && communesData[chosenWilaya] ? communesData[chosenWilaya] : [];
+          if (!list.length && !chosenWilaya) {
+            // Toutes les communes si aucune wilaya
+            var all = [];
+            Object.keys(communesData).forEach(function(k) {
+              communesData[k].forEach(function(c) { if (all.indexOf(c) === -1) all.push(c); });
+            });
+            list = all.sort();
+          }
+          list.forEach(function(c) {
+            var opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            citySelect.appendChild(opt);
+          });
+        });
       }
     })();
   </script>

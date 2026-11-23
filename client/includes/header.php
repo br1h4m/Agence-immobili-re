@@ -46,6 +46,10 @@ $agency_tel_raw = preg_replace('/[^0-9+]/', '', $agency_tel);
     <div class="header-actions">
       <a href="/client/estimation.php" class="btn btn-outline btn-sm header-cta">Estimer mon bien</a>
       <a href="/client/fiche-client.php" class="btn btn-primary btn-sm header-cta">Fiche client</a>
+      <a href="/admin/login.html" class="btn btn-ghost btn-sm" title="Espace Conseiller & Administration" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Espace Pro</span>
+      </a>
       
       <button type="button" class="menu-toggle" id="menu-toggle-btn" aria-expanded="false" aria-controls="mobile-nav" aria-label="Ouvrir le menu">
         <span class="menu-toggle-open">
@@ -68,6 +72,7 @@ $agency_tel_raw = preg_replace('/[^0-9+]/', '', $agency_tel);
         <li><a href="/client/estimation.php">Estimation</a></li>
         <li><a href="/client/a-propos.php">À propos</a></li>
         <li><a href="/client/contact.php">Contact</a></li>
+        <li><a href="/admin/login.html" style="color:var(--color-accent); font-weight:600;">Espace Pro (Connexion Admin)</a></li>
       </ul>
     </nav>
     <div class="mobile-nav-footer">

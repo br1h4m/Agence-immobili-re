@@ -25,6 +25,10 @@ $agency_tel = $settings['agence_telephone'] ?? $settings['phone'] ?? '+213 555 1
 $agency_email = $settings['agence_email'] ?? $settings['email'] ?? 'contact@immolode.dz';
 $agency_address = $settings['agence_adresse'] ?? $settings['address'] ?? '12 rue Didouche Mourad, Béjaïa 06000';
 
+$hero_image = !empty($settings['cms_hero_image']) ? $settings['cms_hero_image'] : 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=75';
+$hero_title = !empty($settings['cms_hero_title']) ? $settings['cms_hero_title'] : 'Votre prochain bien commence ici';
+$hero_subtitle = !empty($settings['cms_hero_subtitle']) ? $settings['cms_hero_subtitle'] : 'Découvrez des propriétés sélectionnées avec soin pour vos projets d\'achat et de location en Algérie.';
+
 // 2. Requête MySQL préparée pour récupérer les annonces "À la une"
 $stmt = $conn->prepare("SELECT * FROM `properties` WHERE `a_la_une` = 1 AND `statut` = 'Disponible' ORDER BY `date_creation` DESC LIMIT 6");
 $stmt->execute();
@@ -73,15 +77,15 @@ if (empty($search_types)) {
     <!-- Section Hero avec image optimisée et moteur de recherche rapide -->
     <section class="hero">
       <div class="hero-media" aria-hidden="true">
-        <img src="https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=75" alt="" fetchpriority="high">
+        <img src="<?= e($hero_image) ?>" alt="Immolode Immobilier" fetchpriority="high">
         <span class="hero-overlay"></span>
       </div>
 
       <div class="container hero-inner">
         <div class="hero-content">
           <p class="hero-eyebrow">Agence Immobilière Agréée</p>
-          <h1 class="hero-title">Votre prochain bien commence ici</h1>
-          <p class="hero-subtitle">Découvrez des propriétés sélectionnées avec soin pour vos projets d'achat et de location en Algérie.</p>
+          <h1 class="hero-title"><?= e($hero_title) ?></h1>
+          <p class="hero-subtitle"><?= e($hero_subtitle) ?></p>
         </div>
 
         <!-- Moteur de recherche rapide direct en PHP -->

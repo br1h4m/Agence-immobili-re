@@ -1,9 +1,11 @@
 // admin/biens.js
 import {
   initAdminLayout, adminIcon, formatPrice, formatSurface, formatDate,
-  statusBadge, transactionBadge, showToast, confirmModal, escapeHTML
+  statusBadge, transactionBadge, showToast, confirmModal, escapeHTML, openCsvImportModal
 } from '/admin/assets/js/admin.js';
-import { getProperties, deleteProperty, updatePropertyStatus } from '/admin/data/admin-store.js';
+import {
+  getProperties, deleteProperty, updatePropertyStatus, bulkDeleteProperties, syncWithBackend
+} from '/admin/data/admin-store.js';
 
 let currentFilters = {
   search: '',
@@ -12,6 +14,9 @@ let currentFilters = {
   status: '',
   sort: 'recent'
 };
+
+let isSelectMode = false;
+let selectedPropertyIds = new Set();
 
 async function init() {
   const ready = await initAdminLayout({
@@ -31,8 +36,29 @@ async function init() {
   if (!root) return;
 
   root.innerHTML = `
+    <!-- Barre supérieure : Outils d'import et de sélection -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+      <p style="color: var(--admin-text-muted); font-size: 0.92rem; margin: 0;">
+        Catalogue complet des biens immobiliers, gestion des disponibilités et publication.
+      </p>
+
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-import-biens" title="Importer des propriétés depuis un fichier Excel ou CSV">
+          ${adminIcon('upload', { size: 14 })}
+          <span>Importer CSV / Excel</span>
+        </button>
+        <button type="button" class="btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm" id="btn-toggle-select-mode">
+          ${adminIcon('check', { size: 14 })}
+          <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Conteneur de la barre d'actions groupées -->
+    <div id="biens-bulk-bar-container"></div>
+
     <!-- Barre de recherche et filtres -->
-    <div class="filters-bar">
+    <div class="filters-bar" style="background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 24px;">
       <div class="search-input-wrap">
         <span class="admin-icon">${adminIcon('search', { size: 16 })}</span>
         <input type="text" id="filter-search" placeholder="Rechercher par titre, référence, ville..." value="${escapeHTML(currentFilters.search)}">
@@ -67,6 +93,7 @@ async function init() {
           <option value="recent">Plus récents</option>
           <option value="price-asc">Prix croissant</option>
           <option value="price-desc">Prix décroissant</option>
+          <option value="surface-asc">Surface croissante</option>
           <option value="surface-desc">Surface décroissante</option>
         </select>
 
@@ -80,8 +107,43 @@ async function init() {
     <div id="biens-results"></div>
   `;
 
+  // Bouton importer
+  document.getElementById('btn-import-biens')?.addEventListener('click', () => {
+    openCsvImportModal('biens', () => {
+      syncWithBackend().then(() => renderResults());
+    });
+  });
+
+  // Bouton mode sélection
+  document.getElementById('btn-toggle-select-mode')?.addEventListener('click', () => {
+    isSelectMode = !isSelectMode;
+    selectedPropertyIds.clear();
+    const btn = document.getElementById('btn-toggle-select-mode');
+    if (btn) {
+      btn.className = `btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm`;
+      btn.innerHTML = `${adminIcon('check', { size: 14 })} <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>`;
+    }
+    renderResults();
+  });
+
   bindFilterEvents();
   renderResults();
+  handleUrlTarget();
+}
+
+function handleUrlTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const targetId = params.get('id');
+  if (targetId) {
+    setTimeout(() => {
+      const row = document.querySelector(`tr[data-property-id="${targetId}"]`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('row-highlight');
+        setTimeout(() => row.classList.remove('row-highlight'), 3500);
+      }
+    }, 200);
+  }
 }
 
 function bindFilterEvents() {
@@ -132,7 +194,56 @@ function bindFilterEvents() {
   });
 }
 
+function renderBulkBar() {
+  const container = document.getElementById('biens-bulk-bar-container');
+  if (!container) return;
+
+  if (!isSelectMode || selectedPropertyIds.size === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="bulk-actions-bar">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="bulk-badge">${selectedPropertyIds.size}</span>
+        <span style="font-weight: 600;">bien${selectedPropertyIds.size > 1 ? 's' : ''} sélectionné${selectedPropertyIds.size > 1 ? 's' : ''}</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
+        <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+          ${adminIcon('trash', { size: 14 })}
+          <span>Supprimer (${selectedPropertyIds.size})</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-bulk-cancel')?.addEventListener('click', () => {
+    selectedPropertyIds.clear();
+    renderResults();
+  });
+
+  document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
+    const count = selectedPropertyIds.size;
+    const ok = await confirmModal({
+      title: 'Suppression groupée de biens',
+      message: `Êtes-vous certain de vouloir supprimer définitivement ${count} bien${count > 1 ? 's' : ''} du catalogue et du site public ? Cette action est irréversible.`,
+      confirmText: `Supprimer ${count} bien${count > 1 ? 's' : ''}`,
+      cancelText: 'Annuler'
+    });
+
+    if (ok) {
+      await bulkDeleteProperties(Array.from(selectedPropertyIds));
+      showToast(`${count} bien${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''} avec succès`);
+      selectedPropertyIds.clear();
+      renderResults();
+    }
+  });
+}
+
 function renderResults() {
+  renderBulkBar();
   const container = document.getElementById('biens-results');
   if (!container) return;
 
@@ -152,6 +263,8 @@ function renderResults() {
     return;
   }
 
+  const allChecked = properties.length > 0 && properties.every((p) => selectedPropertyIds.has(String(p.id)));
+
   container.innerHTML = `
     <div class="card">
       <div class="card-header">
@@ -165,20 +278,31 @@ function renderResults() {
           <table class="admin-table">
             <thead>
               <tr>
+                ${isSelectMode ? `
+                  <th style="width: 44px; text-align: center;">
+                    <input type="checkbox" id="check-all-props" ${allChecked ? 'checked' : ''} title="Tout sélectionner">
+                  </th>
+                ` : ''}
                 <th>Bien & Référence</th>
                 <th>Type</th>
                 <th>Localisation</th>
                 <th>Surface</th>
                 <th>Prix</th>
                 <th>Statut</th>
-                <th style="text-align: right;">Actions</th>
+                <th style="text-align: right; width: 120px;">Actions</th>
               </tr>
             </thead>
             <tbody>
               ${properties.map((p) => {
                 const thumb = p.images && p.images[0] ? p.images[0] : '';
+                const isSelected = selectedPropertyIds.has(String(p.id));
                 return `
-                  <tr data-property-id="${p.id}">
+                  <tr data-property-id="${p.id}" class="${isSelected ? 'is-selected' : ''}">
+                    ${isSelectMode ? `
+                      <td style="width: 44px; text-align: center;">
+                        <input type="checkbox" class="prop-row-checkbox" data-id="${p.id}" ${isSelected ? 'checked' : ''}>
+                      </td>
+                    ` : ''}
                     <td>
                       <div class="table-property-cell">
                         ${thumb ? `<img src="${escapeHTML(thumb)}" alt="" class="table-thumb" loading="lazy">` : ''}
@@ -237,6 +361,26 @@ function renderResults() {
     </div>
   `;
 
+  // Écouteur Check All
+  container.querySelector('#check-all-props')?.addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    properties.forEach((p) => {
+      if (checked) selectedPropertyIds.add(String(p.id));
+      else selectedPropertyIds.delete(String(p.id));
+    });
+    renderResults();
+  });
+
+  // Écouteurs Checkbox individuel
+  container.querySelectorAll('.prop-row-checkbox').forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.checked) selectedPropertyIds.add(id);
+      else selectedPropertyIds.delete(id);
+      renderResults();
+    });
+  });
+
   // Écouteurs pour le changement rapide de statut
   container.querySelectorAll('.property-status-select').forEach((sel) => {
     sel.addEventListener('change', (e) => {
@@ -263,6 +407,7 @@ function renderResults() {
 
       if (confirmed) {
         if (deleteProperty(id)) {
+          selectedPropertyIds.delete(String(id));
           showToast('Le bien a été supprimé avec succès.');
           renderResults();
         } else {

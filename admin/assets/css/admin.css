@@ -55,6 +55,44 @@
   --transition: 260ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
+[data-theme="dark"] {
+  --admin-bg: #121212;
+  --admin-surface: #1E1E1E;
+  --admin-surface-alt: #252525;
+  --admin-border: #333333;
+  --admin-border-subtle: #282828;
+  
+  --admin-text: #E5E5E5;
+  --admin-text-muted: #A0A0A0;
+  --admin-text-subtle: #707070;
+  
+  --admin-gold: #C5A880;
+  --admin-gold-hover: #D4BC96;
+  --admin-gold-soft: #2D271E;
+  --admin-gold-border: #524430;
+
+  --admin-sidebar-bg: #0A0A0A;
+  --admin-sidebar-surface: #141414;
+  --admin-sidebar-border: #1E1E1E;
+  --admin-sidebar-text: #F0F0F0;
+  --admin-sidebar-muted: #808080;
+  --admin-sidebar-active: #C5A880;
+  
+  --admin-success: #34D399;
+  --admin-success-soft: #064E3B;
+  --admin-warning: #FBBF24;
+  --admin-warning-soft: #78350F;
+  --admin-info: #60A5FA;
+  --admin-info-soft: #1E3A8A;
+  --admin-danger: #F87171;
+  --admin-danger-soft: #7F1D1D;
+
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.7);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -1466,4 +1504,80 @@ button, input, select, textarea {
     grid-column: span 12;
   }
 }
+
+/* ==========================================================================
+   Barre d'actions groupées (Bulk actions bar - Point 2.3)
+   ========================================================================== */
+
+.bulk-actions-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--admin-sidebar-bg);
+  color: var(--admin-sidebar-text);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 100;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bulk-actions-bar.is-visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bulk-count-badge {
+  background: var(--admin-gold);
+  color: #1A1A18;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+
+/* Surbrillance animée de ligne ciblée (Point 2.14) */
+@keyframes rowFlash {
+  0% { background-color: rgba(181, 154, 106, 0.45); }
+  50% { background-color: rgba(181, 154, 106, 0.25); }
+  100% { background-color: transparent; }
+}
+
+.row-highlight {
+  animation: rowFlash 2.5s ease-out forwards;
+  outline: 2px solid var(--admin-gold);
+}
+
+/* ==========================================================================
+   Impression : Masquage des éléments d'interface admin
+   ========================================================================== */
+
+@media print {
+  #sidebar-slot,
+  #topbar-slot,
+  .admin-sidebar,
+  .admin-topbar,
+  .sidebar-backdrop,
+  .admin-breadcrumbs,
+  .filters-bar,
+  .drawer-footer,
+  .btn,
+  .btn-icon,
+  .admin-toast-container,
+  .admin-modal-overlay,
+  .bulk-actions-bar,
+  #btn-close-drawer,
+  #btn-close-dossier-drawer,
+  #btn-close-user-drawer {
+    display: none !important;
+  }
+}
+
 

@@ -11,6 +11,16 @@ require_once __DIR__ . '/../backend/db.php';
 
 $activePage = 'services';
 
+// Chargement des paramètres CMS
+$settings = [];
+$resParams = $conn->query("SELECT `cle`, `valeur` FROM `parametres`");
+if ($resParams) {
+    while ($r = $resParams->fetch_assoc()) {
+        $settings[$r['cle']] = $r['valeur'];
+    }
+}
+$services_intro = !empty($settings['cms_services_intro']) ? $settings['cms_services_intro'] : 'Un accompagnement complet et sécurisé pour tous vos projets immobiliers.';
+
 $services = [
     [
         'title' => 'Achat',
@@ -84,7 +94,7 @@ $services = [
     <section class="page-hero">
       <div class="container">
         <h1 class="section-title">Nos services</h1>
-        <p class="section-lead">Un accompagnement complet et sécurisé pour tous vos projets immobiliers.</p>
+        <p class="section-lead"><?= e($services_intro) ?></p>
       </div>
     </section>
 

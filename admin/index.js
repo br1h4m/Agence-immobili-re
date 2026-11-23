@@ -133,9 +133,11 @@ async function renderDashboard() {
                 </thead>
                 <tbody>
                   ${recentDemandes.map((d) => `
-                    <tr>
+                    <tr style="cursor: pointer;" onclick="window.location.href='/admin/demandes?id=${d.id}'">
                       <td>
-                        <strong style="color: var(--admin-text); display: block;">${escapeHTML(d.nom)}</strong>
+                        <a href="/admin/demandes?id=${d.id}" style="color: inherit; text-decoration: none;">
+                          <strong style="color: var(--admin-text); display: block;">${escapeHTML(d.nom)}</strong>
+                        </a>
                         <span style="font-size: 0.78rem; color: var(--admin-text-subtle);">${escapeHTML(d.email || d.phone || '')}</span>
                       </td>
                       <td>
@@ -149,7 +151,7 @@ async function renderDashboard() {
                       <td>
                         ${statusBadge(d.status)}
                       </td>
-                      <td style="text-align: right;">
+                      <td style="text-align: right;" onclick="event.stopPropagation()">
                         <a href="/admin/demandes?id=${d.id}" class="btn-icon" title="Consulter la demande">
                           ${adminIcon('eye', { size: 16 })}
                         </a>
@@ -195,12 +197,12 @@ async function renderDashboard() {
                   ${recentProperties.map((p) => {
                     const thumb = p.images && p.images[0] ? p.images[0] : '';
                     return `
-                      <tr>
+                      <tr style="cursor: pointer;" onclick="window.location.href='/admin/biens?id=${p.id}'">
                         <td>
                           <div class="table-property-cell">
                             ${thumb ? `<img src="${escapeHTML(thumb)}" alt="" class="table-thumb" loading="lazy">` : ''}
                             <div>
-                              <a href="/admin/bien-edit?id=${p.id}" class="table-property-title" title="${escapeHTML(p.title)}">
+                              <a href="/admin/biens?id=${p.id}" class="table-property-title" title="${escapeHTML(p.title)}">
                                 ${escapeHTML(p.title)}
                               </a>
                               <span class="table-property-ref">${escapeHTML(p.reference || '')} · ${escapeHTML(p.location?.city || '')}</span>
@@ -213,8 +215,11 @@ async function renderDashboard() {
                         <td>
                           ${statusBadge(p.status)}
                         </td>
-                        <td style="text-align: right;">
+                        <td style="text-align: right;" onclick="event.stopPropagation()">
                           <div class="table-actions" style="justify-content: flex-end;">
+                            <a href="/admin/biens?id=${p.id}" class="btn-icon" title="Voir l'annonce dans le tableau des biens">
+                              ${adminIcon('eye', { size: 16 })}
+                            </a>
                             <a href="/client/bien?id=${p.id}" target="_blank" rel="noopener" class="btn-icon" title="Voir sur le site public">
                               ${adminIcon('external', { size: 15 })}
                             </a>
@@ -266,7 +271,7 @@ async function renderDashboard() {
               </thead>
               <tbody>
                 ${recentFichesClient.map((f) => `
-                  <tr>
+                  <tr style="cursor: pointer;" onclick="window.location.href='/admin/fiches-client?id=${f.id}'">
                     <td>
                       <div style="font-weight: 600; color: var(--admin-text); font-size: 0.85rem;">${formatDate(f.createdAt)}</div>
                       <span style="font-size: 0.76rem; font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(f.reference || '')}</span>
@@ -284,9 +289,9 @@ async function renderDashboard() {
                     <td>
                       ${statusBadge(f.status || 'Nouveau')}
                     </td>
-                    <td style="text-align: right;">
-                      <a href="/admin/fiches-client?id=${f.id}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">
-                        ${adminIcon('eye', { size: 14 })} Consulter
+                    <td style="text-align: right;" onclick="event.stopPropagation()">
+                      <a href="/admin/fiches-client?id=${f.id}" class="btn-icon" title="Consulter la fiche client">
+                        ${adminIcon('eye', { size: 16 })}
                       </a>
                     </td>
                   </tr>

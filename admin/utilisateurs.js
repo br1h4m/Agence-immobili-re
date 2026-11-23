@@ -2,13 +2,16 @@
 // MODULE ES NAVIGATEUR — gestion des utilisateurs et conseillers de l'agence Imolode.
 
 import {
-  initAdminLayout, adminIcon, showToast, confirmModal, escapeHTML
+  initAdminLayout, adminIcon, showToast, confirmModal, escapeHTML, openCsvImportModal
 } from '/admin/assets/js/admin.js';
 import {
-  getUsers, saveUser, deleteUser
+  getUsers, saveUser, deleteUser, bulkDeleteUsers
 } from '/admin/data/admin-store.js';
+import { getCurrentUser } from '/admin/includes/auth.js';
 
 let editingUserId = null;
+let isSelectMode = false;
+let selectedUserIds = new Set();
 
 async function init() {
   const ready = await initAdminLayout({
@@ -29,32 +32,115 @@ async function init() {
   if (!root) return;
 
   root.innerHTML = `
-    <!-- Entête avec explication -->
-    <div style="margin-bottom: 24px;">
+    <!-- Barre d'outils et actions globales -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
       <p style="color: var(--admin-text-muted); font-size: 0.92rem; margin: 0;">
         Gérez les comptes d'accès à l'interface d'administration ainsi que les conseillers affichés sur le site public.
       </p>
+
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-import-users" title="Importer des membres depuis un fichier Excel ou CSV">
+          ${adminIcon('upload', { size: 14 })}
+          <span>Importer CSV / Excel</span>
+        </button>
+        <button type="button" class="btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm" id="btn-toggle-select-mode">
+          ${adminIcon('check', { size: 14 })}
+          <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>
+        </button>
+      </div>
     </div>
+
+    <!-- Conteneur de la barre d'actions groupées -->
+    <div id="users-bulk-bar-container"></div>
 
     <!-- Conteneur de la liste -->
     <div id="users-table-container"></div>
   `;
 
-  // Écoute du bouton d'action du topbar
+  // Bouton topbar
   document.getElementById('btn-add-user')?.addEventListener('click', (e) => {
     e.preventDefault();
     openUserDrawer();
+  });
+
+  // Bouton importer
+  document.getElementById('btn-import-users')?.addEventListener('click', () => {
+    openCsvImportModal('utilisateurs', () => {
+      renderUsers();
+    });
+  });
+
+  // Bouton mode sélection
+  document.getElementById('btn-toggle-select-mode')?.addEventListener('click', () => {
+    isSelectMode = !isSelectMode;
+    selectedUserIds.clear();
+    const btn = document.getElementById('btn-toggle-select-mode');
+    if (btn) {
+      btn.className = `btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm`;
+      btn.innerHTML = `${adminIcon('check', { size: 14 })} <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>`;
+    }
+    renderUsers();
   });
 
   setupDrawerListeners();
   renderUsers();
 }
 
+function renderBulkBar() {
+  const container = document.getElementById('users-bulk-bar-container');
+  if (!container) return;
+
+  if (!isSelectMode || selectedUserIds.size === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="bulk-actions-bar">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="bulk-badge">${selectedUserIds.size}</span>
+        <span style="font-weight: 600;">membre${selectedUserIds.size > 1 ? 's' : ''} sélectionné${selectedUserIds.size > 1 ? 's' : ''}</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
+        <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+          ${adminIcon('trash', { size: 14 })}
+          <span>Supprimer (${selectedUserIds.size})</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-bulk-cancel')?.addEventListener('click', () => {
+    selectedUserIds.clear();
+    renderUsers();
+  });
+
+  document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
+    const count = selectedUserIds.size;
+    const ok = await confirmModal({
+      title: 'Suppression groupée de membres',
+      message: `Êtes-vous certain de vouloir supprimer définitivement ${count} membre${count > 1 ? 's' : ''} ? Cette action est irréversible.`,
+      confirmText: `Supprimer ${count} membre${count > 1 ? 's' : ''}`,
+      cancelText: 'Annuler'
+    });
+
+    if (ok) {
+      await bulkDeleteUsers(Array.from(selectedUserIds));
+      showToast(`${count} membre${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''}`);
+      selectedUserIds.clear();
+      renderUsers();
+    }
+  });
+}
+
 function renderUsers() {
+  renderBulkBar();
   const container = document.getElementById('users-table-container');
   if (!container) return;
 
   const users = getUsers();
+  const currentUser = getCurrentUser() || {};
 
   if (users.length === 0) {
     container.innerHTML = `
@@ -65,11 +151,13 @@ function renderUsers() {
           </div>
           <h3 class="empty-state-title">Aucun utilisateur enregistré</h3>
           <p class="empty-state-text">
-            Cliquez sur « Ajouter un membre » pour créer un nouveau compte.
+            Cliquez sur « Ajouter un membre » ou importez un fichier CSV pour créer un nouveau compte.
           </p>
-          <button type="button" class="btn btn-primary" id="btn-empty-add-user">
-            ${adminIcon('plus', { size: 16 })} Ajouter un membre
-          </button>
+          <div style="display: flex; gap: 10px; margin-top: 14px;">
+            <button type="button" class="btn btn-primary" id="btn-empty-add-user">
+              ${adminIcon('plus', { size: 16 })} Ajouter un membre
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -78,23 +166,62 @@ function renderUsers() {
   }
 
   const rows = users.map((u) => {
-    const roleBadge = u.role === 'Administrateur'
-      ? `<span class="badge badge--success">${u.role}</span>`
-      : `<span class="badge badge--info">${u.role || 'Agent commercial'}</span>`;
+    const isSelf = String(u.id) === String(currentUser.id) || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase());
+
+    const roleBadge = u.role === 'Administrateur' || u.role === 'Gérant'
+      ? `<span class="badge badge--success">${escapeHTML(u.role)}</span>`
+      : `<span class="badge badge--info">${escapeHTML(u.role || 'Agent commercial')}</span>`;
 
     const statusBadgeHtml = u.actif !== false
       ? `<span class="badge badge--success">Actif</span>`
       : `<span class="badge badge--muted">Inactif</span>`;
 
+    const avatarHtml = u.avatar
+      ? `<img src="${escapeHTML(u.avatar)}" alt="${escapeHTML(u.nom || '')}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">`
+      : `<div class="user-avatar" style="width: 38px; height: 38px; border-radius: 50%; background-color: var(--admin-gold); color: #FFF; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.95rem;">
+          ${escapeHTML(u.nom?.charAt(0) || 'U')}
+        </div>`;
+
+    const checkboxTd = isSelectMode ? `
+      <td style="width: 44px; text-align: center;">
+        ${isSelf ? `
+          <input type="checkbox" disabled title="Votre propre compte ne peut être sélectionné pour suppression" style="opacity: 0.35; cursor: not-allowed;">
+        ` : `
+          <input type="checkbox" class="user-row-checkbox" data-id="${u.id}" ${selectedUserIds.has(String(u.id)) ? 'checked' : ''}>
+        `}
+      </td>
+    ` : '';
+
+    const actionsTd = isSelf ? `
+      <td>
+        <span style="font-size: 0.76rem; font-weight: 600; color: var(--admin-gold); background: rgba(181, 154, 106, 0.12); padding: 4px 8px; border-radius: var(--radius-xs); white-space: nowrap; display: inline-block;">
+          Votre compte (Mon Profil)
+        </span>
+      </td>
+    ` : `
+      <td>
+        <div class="table-actions">
+          <button type="button" class="btn-icon btn-edit-user" data-id="${u.id}" title="Modifier" aria-label="Modifier">
+            ${adminIcon('edit', { size: 16 })}
+          </button>
+          <button type="button" class="btn-icon btn-icon--danger btn-delete-user" data-id="${u.id}" title="Supprimer" aria-label="Supprimer">
+            ${adminIcon('trash', { size: 16 })}
+          </button>
+        </div>
+      </td>
+    `;
+
     return `
-      <tr data-id="${u.id}">
+      <tr data-id="${u.id}" class="${selectedUserIds.has(String(u.id)) ? 'is-selected' : ''}">
+        ${checkboxTd}
         <td>
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="user-avatar" style="width: 38px; height: 38px; border-radius: 50%; background-color: var(--admin-gold); color: #FFF; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.95rem;">
-              ${escapeHTML(u.nom?.charAt(0) || 'U')}
-            </div>
+            ${avatarHtml}
             <div>
-              <div style="font-weight: 600; color: var(--admin-text);">${escapeHTML(u.nom || 'Sans nom')}</div>
+              <div style="font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 6px;">
+                ${escapeHTML(u.nom || 'Sans nom')}
+                ${isSelf ? `<span class="badge badge--gold" style="font-size: 0.68rem; padding: 1px 6px;">Vous</span>` : ''}
+              </div>
               <div style="font-size: 0.78rem; color: var(--admin-text-subtle);">${escapeHTML(u.poste || 'Conseiller')}</div>
             </div>
           </div>
@@ -105,34 +232,38 @@ function renderUsers() {
         </td>
         <td>${roleBadge}</td>
         <td>${statusBadgeHtml}</td>
-        <td>
-          <div class="table-actions">
-            <button type="button" class="btn-icon btn-edit-user" data-id="${u.id}" title="Modifier" aria-label="Modifier">
-              ${adminIcon('edit', { size: 16 })}
-            </button>
-            <button type="button" class="btn-icon btn-icon--danger btn-delete-user" data-id="${u.id}" title="Supprimer" aria-label="Supprimer">
-              ${adminIcon('trash', { size: 16 })}
-            </button>
-          </div>
-        </td>
+        ${actionsTd}
       </tr>
     `;
   }).join('');
 
+  const selectableUsers = users.filter((u) => {
+    return !(String(u.id) === String(currentUser.id) || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase()));
+  });
+  const allSelectableChecked = selectableUsers.length > 0 && selectableUsers.every((u) => selectedUserIds.has(String(u.id)));
+
   container.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <h2 class="card-title">Membres de l'équipe (${users.length})</h2>
+        <div>
+          <h2 class="card-title">Membres de l'équipe (${users.length})</h2>
+          <p class="card-subtitle">Administrateurs et agents autorisés</p>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="admin-table">
           <thead>
             <tr>
+              ${isSelectMode ? `
+                <th style="width: 44px; text-align: center;">
+                  <input type="checkbox" id="check-all-users" ${allSelectableChecked ? 'checked' : ''} title="Tout sélectionner">
+                </th>
+              ` : ''}
               <th>Utilisateur / Conseiller</th>
               <th>Coordonnées</th>
               <th>Rôle</th>
               <th>Statut</th>
-              <th style="width: 100px;">Actions</th>
+              <th style="width: 140px;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -147,6 +278,34 @@ function renderUsers() {
 }
 
 function bindTableEvents(container) {
+  // Checkbox tout sélectionner
+  const checkAll = container.querySelector('#check-all-users');
+  checkAll?.addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    const users = getUsers();
+    const currentUser = getCurrentUser() || {};
+
+    users.forEach((u) => {
+      const isSelf = String(u.id) === String(currentUser.id) || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase());
+      if (!isSelf) {
+        if (checked) selectedUserIds.add(String(u.id));
+        else selectedUserIds.delete(String(u.id));
+      }
+    });
+
+    renderUsers();
+  });
+
+  // Checkbox individuel
+  container.querySelectorAll('.user-row-checkbox').forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.checked) selectedUserIds.add(id);
+      else selectedUserIds.delete(id);
+      renderUsers();
+    });
+  });
+
   // Éditer
   container.querySelectorAll('.btn-edit-user').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -166,6 +325,7 @@ function bindTableEvents(container) {
       });
       if (ok) {
         deleteUser(id);
+        selectedUserIds.delete(String(id));
         showToast('Utilisateur supprimé');
         renderUsers();
       }
@@ -204,6 +364,20 @@ function openUserDrawer(id = null) {
     <form id="form-user-drawer" style="display: flex; flex-direction: column; flex: 1;">
       <div class="drawer-body">
         <div class="form-section">
+          <!-- Photo / Avatar -->
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="user-input-avatar">Photo de profil (URL ou lien direct)</label>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div id="user-avatar-preview" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--admin-gold); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                ${user?.avatar ? `<img src="${escapeHTML(user.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : escapeHTML(user?.nom?.charAt(0) || 'U')}
+              </div>
+              <input type="url" class="form-input" id="user-input-avatar" value="${escapeHTML(user?.avatar || '')}" placeholder="https://images.unsplash.com/photo-...">
+            </div>
+            <p class="form-hint" style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:4px;">
+              Laissez vide pour utiliser les initiales du nom.
+            </p>
+          </div>
+
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-nom">Nom complet <span class="required">*</span></label>
             <input type="text" class="form-input" id="user-input-nom" required value="${escapeHTML(user?.nom || '')}" placeholder="Ex: G. Hocine">
@@ -211,12 +385,12 @@ function openUserDrawer(id = null) {
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-poste">Poste / Fonction <span class="required">*</span></label>
-            <input type="text" class="form-input" id="user-input-poste" required value="${escapeHTML(user?.poste || '')}" placeholder="Ex: Gérant">
+            <input type="text" class="form-input" id="user-input-poste" required value="${escapeHTML(user?.poste || '')}" placeholder="Ex: Conseiller immobilier senior">
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-email">Adresse e-mail <span class="required">*</span></label>
-            <input type="email" class="form-input" id="user-input-email" required value="${escapeHTML(user?.email || '')}" placeholder="gahamhocine2@gmail.com">
+            <input type="email" class="form-input" id="user-input-email" required value="${escapeHTML(user?.email || '')}" placeholder="conseiller@immolode.dz">
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
@@ -227,7 +401,6 @@ function openUserDrawer(id = null) {
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-role">Rôle d'administration</label>
             <select class="form-select" id="user-input-role" style="width: 100%;">
-              <option value="Gérant" ${user?.role === 'Gérant' ? 'selected' : ''}>Gérant (direction & accès complet)</option>
               <option value="Administrateur" ${user?.role === 'Administrateur' ? 'selected' : ''}>Administrateur (accès complet)</option>
               <option value="Agent commercial" ${user?.role === 'Agent commercial' || !user?.role ? 'selected' : ''}>Agent commercial (biens & demandes)</option>
               <option value="Gestionnaire" ${user?.role === 'Gestionnaire' ? 'selected' : ''}>Gestionnaire de biens</option>
@@ -258,6 +431,16 @@ function openUserDrawer(id = null) {
   document.getElementById('btn-close-user-drawer')?.addEventListener('click', closeUserDrawer);
   document.getElementById('btn-cancel-user')?.addEventListener('click', closeUserDrawer);
 
+  const avatarInput = document.getElementById('user-input-avatar');
+  avatarInput?.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    const preview = document.getElementById('user-avatar-preview');
+    if (preview) {
+      if (val) preview.innerHTML = `<img src="${escapeHTML(val)}" style="width:100%;height:100%;object-fit:cover;">`;
+      else preview.textContent = document.getElementById('user-input-nom')?.value?.charAt(0) || 'U';
+    }
+  });
+
   const form = document.getElementById('form-user-drawer');
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -267,6 +450,7 @@ function openUserDrawer(id = null) {
     const phone = document.getElementById('user-input-phone')?.value.trim();
     const role = document.getElementById('user-input-role')?.value;
     const actif = document.getElementById('user-input-actif')?.checked;
+    const avatar = document.getElementById('user-input-avatar')?.value.trim();
 
     if (!nom || !email) {
       showToast('Le nom et l\'email sont obligatoires', 'error');
@@ -280,7 +464,8 @@ function openUserDrawer(id = null) {
       email,
       phone,
       role,
-      actif
+      actif,
+      avatar
     };
 
     if (id) {
@@ -303,4 +488,3 @@ function closeUserDrawer() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-

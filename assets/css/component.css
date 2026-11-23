@@ -102,22 +102,43 @@
   gap: 1px;
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border-soft);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border);
   overflow: hidden;
   padding: 6px;
 }
 .search-field { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; }
 .search-field label {
   font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
-  color: var(--color-muted); font-weight: 600;
+  color: var(--color-accent-dark, #8C7355); font-weight: 700;
 }
 .search-field select, .search-field input {
   border: 0; padding: 0; background: transparent;
   font-size: 0.95rem; color: var(--color-text); height: 24px;
 }
 .search-field select { background-image: none; padding-right: 0; }
-.search-field select:focus, .search-field input:focus { box-shadow: none; }
+.search-field select:focus, .search-field input:focus { box-shadow: none; outline: none; }
+.search-bar button[type="submit"] {
+  background: var(--color-accent);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(181, 154, 106, 0.45);
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.search-bar button[type="submit"]:hover {
+  background: var(--color-accent-dark, #8C7355);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(181, 154, 106, 0.55);
+}
+.search-bar button[type="submit"]:active {
+  transform: translateY(1px);
+}
 .search-submit { margin: 6px; padding: 12px 20px; }
 .search-bar--compact { box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); }
 
@@ -199,16 +220,37 @@
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
   color: var(--color-muted); font-weight: 600; margin-bottom: 10px;
 }
-.filter-toggle { display: flex; padding: 3px; background: var(--color-bg); border-radius: var(--radius-sm); gap: 3px; }
+.filter-toggle { display: flex; padding: 4px; background: #EFECE6; border-radius: var(--radius-sm); gap: 4px; border: 1px solid var(--color-border); }
 .filter-toggle label { flex: 1; }
 .filter-toggle input { position: absolute; opacity: 0; pointer-events: none; }
 .filter-toggle span {
   display: block; text-align: center; padding: 8px 12px;
-  font-size: 0.86rem; font-weight: 500; color: var(--color-muted);
+  font-size: 0.86rem; font-weight: 600; color: #555;
   border-radius: var(--radius-xs); cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
-.filter-toggle input:checked + span { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-xs); }
+.filter-toggle span:hover { background: rgba(181, 154, 106, 0.2); color: var(--color-text); }
+.filter-toggle input:checked + span {
+  background: var(--color-accent);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(181, 154, 106, 0.45);
+}
+
+.filters select, .filters input[type="text"], .filters input[type="number"] {
+  border: 1px solid #CCC7BE;
+  background: #FAF9F6;
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.filters select:focus, .filters input[type="text"]:focus, .filters input[type="number"]:focus {
+  border-color: var(--color-accent);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(181, 154, 106, 0.2);
+  outline: none;
+}
 
 .filter-field { display: block; margin-bottom: 10px; }
 .filter-field:last-child { margin-bottom: 0; }

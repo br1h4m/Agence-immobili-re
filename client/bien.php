@@ -126,6 +126,10 @@ if ($property) {
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
+
+  <!-- Leaflet Carte Interactive (OpenStreetMap) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 </head>
 <body>
 
@@ -255,13 +259,11 @@ if ($property) {
               </section>
             <?php endif; ?>
 
-            <!-- Localisation -->
+            <!-- Localisation avec Carte Interactive Leaflet -->
             <section style="margin-top: 40px;">
               <h2 class="section-title" style="font-size:1.35rem">Localisation</h2>
               <p class="text-muted" style="margin-bottom:16px"><?= e($full_location) ?></p>
-              <div class="map-placeholder" style="background:var(--color-surface);border:1px solid var(--color-border-soft);border-radius:var(--radius-md);height:260px;display:flex;align-items:center;justify-content:center;color:var(--color-muted);">
-                Secteur : <?= e($property['commune'] . ' (' . $property['wilaya'] . ')') ?>
-              </div>
+              <div id="property-map" style="height: 320px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--color-border-soft); z-index: 1;"></div>
             </section>
 
             <!-- Biens similaires recommandés -->
@@ -278,8 +280,8 @@ if ($property) {
 
           </div>
 
-          <!-- Colonne droite : Panneau de contact de l'agence -->
-          <aside class="contact-panel">
+          <!-- Colonne droite : Panneau de contact de l'agence optimisé pour le défilement -->
+          <aside class="contact-panel" style="position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; scrollbar-width: thin;">
             <h3>Contacter l'agence</h3>
             <p>Nos conseillers sont à votre disposition pour organiser une visite ou répondre à vos questions.</p>
 
@@ -419,7 +421,35 @@ if ($property) {
         });
       }
 
-      // 3. Soumission directe AJAX du formulaire de contact
+      // 3. Initialisation de la carte interactive Leaflet
+      var mapEl = document.getElementById('property-map');
+      if (mapEl && typeof L !== 'undefined') {
+        var lat = <?= $property['latitude'] ?? 36.7511 ?>;
+        var lng = <?= $property['longitude'] ?? 5.0567 ?>;
+        var commune = <?= json_encode(strtolower($property['commune'] ?? '')) ?>;
+        var wilaya = <?= json_encode(strtolower($property['wilaya'] ?? '')) ?>;
+
+        if (commune.indexOf('tichy') !== -1) { lat = 36.666; lng = 5.163; }
+        else if (commune.indexOf('aokas') !== -1) { lat = 36.638; lng = 5.244; }
+        else if (commune.indexOf('akbou') !== -1) { lat = 36.457; lng = 4.544; }
+        else if (commune.indexOf('souk') !== -1) { lat = 36.621; lng = 5.334; }
+        else if (commune.indexOf('kseur') !== -1) { lat = 36.684; lng = 4.902; }
+        else if (wilaya.indexOf('alger') !== -1 || commune.indexOf('hydra') !== -1) { lat = 36.753; lng = 3.058; }
+        else if (wilaya.indexOf('oran') !== -1) { lat = 35.698; lng = -0.633; }
+        else if (wilaya.indexOf('constantine') !== -1) { lat = 36.365; lng = 6.614; }
+        else if (wilaya.indexOf('setif') !== -1 || wilaya.indexOf('sétif') !== -1) { lat = 36.190; lng = 5.413; }
+        else if (wilaya.indexOf('tizi') !== -1) { lat = 36.711; lng = 4.045; }
+
+        var map = L.map('property-map', { scrollWheelZoom: false }).setView([lat, lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var marker = L.marker([lat, lng]).addTo(map);
+        marker.bindPopup('<strong><?= addslashes(e($titre)) ?></strong><br><?= addslashes(e($full_location)) ?>').openPopup();
+      }
+
+      // 4. Soumission directe AJAX du formulaire de contact
       var form = document.getElementById('bien-contact-form');
       if (form) {
         form.addEventListener('submit', function(e) {

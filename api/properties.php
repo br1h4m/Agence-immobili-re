@@ -147,7 +147,20 @@ try {
                 $conditions[] = "`a_la_une` = 1";
             }
 
-            $sql = "SELECT * FROM `properties` WHERE " . implode(' AND ', $conditions) . " ORDER BY `date_creation` DESC";
+            // Gestion du tri
+            $sort = trim($_GET['sort'] ?? 'recent');
+            $orderClause = "ORDER BY `date_creation` DESC";
+            if ($sort === 'price-asc') {
+                $orderClause = "ORDER BY `prix` ASC";
+            } elseif ($sort === 'price-desc') {
+                $orderClause = "ORDER BY `prix` DESC";
+            } elseif ($sort === 'surface-asc') {
+                $orderClause = "ORDER BY `surface` ASC";
+            } elseif ($sort === 'surface-desc') {
+                $orderClause = "ORDER BY `surface` DESC";
+            }
+
+            $sql = "SELECT * FROM `properties` WHERE " . implode(' AND ', $conditions) . " " . $orderClause;
             if (!empty($_GET['limit'])) {
                 $sql .= " LIMIT " . (int)$_GET['limit'];
             }
@@ -187,6 +200,21 @@ try {
                 exit;
             }
 
+            // Suppression multiple (bulk delete)
+            if ($action === 'bulk_delete') {
+                $ids = $input['ids'] ?? [];
+                if (!is_array($ids) || empty($ids)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'Liste des identifiants requise']);
+                    exit;
+                }
+                $intIds = array_map('intval', $ids);
+                $inClause = implode(',', $intIds);
+                $conn->query("DELETE FROM `properties` WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' bien(s) supprimé(s) avec succès']);
+                exit;
+            }
+
             // Génération d'une référence automatique si absente
             $ref = trim($input['reference'] ?? '');
             if (empty($ref)) {
@@ -209,6 +237,17 @@ try {
             $etages    = isset($input['etages']) ? (int)$input['etages'] : null;
             $annee     = isset($input['annee']) ? (int)$input['annee'] : null;
             $garage    = !empty($input['garage']) ? 1 : 0;
+            $statut    = trim((string)($input['statut'] ?? $input['status'] ?? 'Disponible'));
+            $desc      = trim((string)($input['description'] ?? ''));
+
+            // Images (format JSON)
+            $imgsRaw = $input['images'] ?? [];
+            if (is_array($imgsRaw)) {
+                $imgs = json_encode($imgsRaw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            } else {
+                $imgs = (string)($imgsRaw ?: '[]');
+            }
+
             // Gestion des alias d'objets (location, features, etc.)
             if (isset($input['location']) && is_array($input['location'])) {
                 if (empty($wilaya) && !empty($input['location']['wilaya'])) $wilaya = trim($input['location']['wilaya']);

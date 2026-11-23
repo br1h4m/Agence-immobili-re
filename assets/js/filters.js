@@ -18,9 +18,13 @@ const DEFAULT_STATE = {
   q: ''
 };
 
-export function getFilterOptions() {
+export function getFilterOptions(selectedWilaya = '') {
   const wilayas = [...new Set(PROPERTIES.map((p) => p.location?.wilaya).filter(Boolean))].sort();
-  const cities = [...new Set(PROPERTIES.map((p) => p.location?.city).filter(Boolean))].sort();
+  let cityProps = PROPERTIES;
+  if (selectedWilaya) {
+    cityProps = cityProps.filter((p) => p.location?.wilaya === selectedWilaya);
+  }
+  const cities = [...new Set(cityProps.map((p) => p.location?.city).filter(Boolean))].sort();
   return { wilayas, cities };
 }
 
@@ -219,7 +223,15 @@ export function initBiensPage() {
     });
 
     form.addEventListener('change', (e) => {
-      if (e.target.name === 'wilaya' || e.target.name === 'city' || e.target.name === 'transaction') {
+      if (e.target.name === 'wilaya') {
+        const selectedW = e.target.value;
+        const citySel = form.querySelector('select[name="city"]');
+        if (citySel) {
+          const { cities } = getFilterOptions(selectedW);
+          citySel.innerHTML = '<option value="">Toutes les villes</option>' + cities.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        applyFromForm();
+      } else if (e.target.name === 'city' || e.target.name === 'transaction') {
         applyFromForm();
       }
     });

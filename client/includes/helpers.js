@@ -20,9 +20,9 @@ export function asset(path = '') {
   return `${CONFIG.ASSETS_URL}/${String(path).replace(/^\/+/, '')}`;
 }
 
-/** URL propre d'une fiche bien : /client/bien/12 */
+/** URL d'une fiche bien : /client/bien?id=12 */
 export function propertyUrl(id) {
-  return url(`/bien/${id}`);
+  return `/client/bien?id=${encodeURIComponent(id)}`;
 }
 
 /** Lien tel: (ne garde que les chiffres et le "+") */

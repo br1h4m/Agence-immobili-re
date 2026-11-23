@@ -3,10 +3,11 @@
 
 import {
   initAdminLayout, adminIcon, formatDateTime, formatDate,
-  statusBadge, showToast, confirmModal, escapeHTML
+  statusBadge, showToast, confirmModal, escapeHTML, printDocument
 } from '/admin/assets/js/admin.js';
 import {
-  getDemandes, getDemandeById, updateDemandeStatus, deleteDemande
+  getDemandes, getDemandeById, updateDemandeStatus, deleteDemande,
+  bulkDeleteDemandes, markDemandeRead, bulkMarkDemandesRead
 } from '/admin/data/admin-store.js';
 
 let currentFilters = {
@@ -16,6 +17,8 @@ let currentFilters = {
 };
 
 let activeDemandeId = null;
+let isSelectMode = false;
+let selectedDemandeIds = new Set();
 
 async function init() {
   const ready = await initAdminLayout({
@@ -35,14 +38,23 @@ async function init() {
       <div style="font-size: 0.88rem; color: var(--admin-text);">
         <strong>Dossiers officiels :</strong> Vous recherchez les fiches clients avec signatures électroniques et justificatifs d'identité ?
       </div>
-      <a href="/admin/fiches-client" class="btn btn-primary btn-sm" style="flex-shrink: 0;">
-        ${adminIcon('file-text', { size: 14 })}
-        <span>Consulter les fiches client</span>
-      </a>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <a href="/admin/fiches-client" class="btn btn-primary btn-sm" style="flex-shrink: 0;">
+          ${adminIcon('file-text', { size: 14 })}
+          <span>Consulter les fiches client</span>
+        </a>
+        <button type="button" class="btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm" id="btn-toggle-select-mode">
+          ${adminIcon('check', { size: 14 })}
+          <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>
+        </button>
+      </div>
     </div>
 
+    <!-- Barre d'actions groupées -->
+    <div id="demandes-bulk-bar-container"></div>
+
     <!-- Barre de filtres et recherche -->
-    <div class="filters-bar">
+    <div class="filters-bar" style="background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 24px;">
       <div class="search-input-wrap">
         <span class="admin-icon">${adminIcon('search', { size: 16 })}</span>
         <input type="text" id="filter-search" placeholder="Rechercher par nom, email, téléphone, sujet..." value="${escapeHTML(currentFilters.search)}">
@@ -75,9 +87,38 @@ async function init() {
     <div id="demandes-results"></div>
   `;
 
+  // Toggle mode sélection
+  document.getElementById('btn-toggle-select-mode')?.addEventListener('click', () => {
+    isSelectMode = !isSelectMode;
+    selectedDemandeIds.clear();
+    const btn = document.getElementById('btn-toggle-select-mode');
+    if (btn) {
+      btn.className = `btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm`;
+      btn.innerHTML = `${adminIcon('check', { size: 14 })} <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>`;
+    }
+    renderResults();
+  });
+
   bindFilterEvents();
   setupDrawerListeners();
   renderResults();
+  handleUrlTarget();
+}
+
+function handleUrlTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const targetId = params.get('id');
+  if (targetId) {
+    setTimeout(() => {
+      const row = document.querySelector(`tr[data-id="${targetId}"]`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('row-highlight');
+        setTimeout(() => row.classList.remove('row-highlight'), 3500);
+      }
+      openDrawer(targetId);
+    }, 200);
+  }
 }
 
 function bindFilterEvents() {
@@ -114,7 +155,68 @@ function bindFilterEvents() {
   });
 }
 
+function renderBulkBar() {
+  const container = document.getElementById('demandes-bulk-bar-container');
+  if (!container) return;
+
+  if (!isSelectMode || selectedDemandeIds.size === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="bulk-actions-bar">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="bulk-badge">${selectedDemandeIds.size}</span>
+        <span style="font-weight: 600;">demande${selectedDemandeIds.size > 1 ? 's' : ''} sélectionnée${selectedDemandeIds.size > 1 ? 's' : ''}</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-mark-read">
+          ${adminIcon('check', { size: 14 })}
+          <span>Marquer comme lu (${selectedDemandeIds.size})</span>
+        </button>
+        <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+          ${adminIcon('trash', { size: 14 })}
+          <span>Supprimer (${selectedDemandeIds.size})</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-bulk-cancel')?.addEventListener('click', () => {
+    selectedDemandeIds.clear();
+    renderResults();
+  });
+
+  document.getElementById('btn-bulk-mark-read')?.addEventListener('click', async () => {
+    const ids = Array.from(selectedDemandeIds);
+    await bulkMarkDemandesRead(ids, 1);
+    showToast(`${ids.length} demande(s) marquée(s) comme lue(s)`);
+    selectedDemandeIds.clear();
+    renderResults();
+  });
+
+  document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
+    const count = selectedDemandeIds.size;
+    const ok = await confirmModal({
+      title: 'Suppression groupée de demandes',
+      message: `Êtes-vous certain de vouloir supprimer définitivement ces ${count} demande${count > 1 ? 's' : ''} ? Cette action est irréversible.`,
+      confirmText: `Supprimer ${count} demande${count > 1 ? 's' : ''}`,
+      cancelText: 'Annuler'
+    });
+
+    if (ok) {
+      await bulkDeleteDemandes(Array.from(selectedDemandeIds));
+      showToast(`${count} demande${count > 1 ? 's' : ''} supprimée${count > 1 ? 's' : ''}`);
+      selectedDemandeIds.clear();
+      renderResults();
+    }
+  });
+}
+
 function renderResults() {
+  renderBulkBar();
   const container = document.getElementById('demandes-results');
   if (!container) return;
 
@@ -137,9 +239,13 @@ function renderResults() {
     return;
   }
 
+  const allChecked = list.length > 0 && list.every((item) => selectedDemandeIds.has(String(item.id)));
+
   const rows = list.map((item) => {
     const isEstimation = item.type === 'Estimation';
     const isFicheClient = item.type === 'Fiche client';
+    const isUnread = item.is_read === 0 || item.is_read === '0' || item.is_read === false;
+    const isSelected = selectedDemandeIds.has(String(item.id));
 
     let typeBadge = '';
     if (isFicheClient) {
@@ -155,20 +261,30 @@ function renderResults() {
     const hasSig = Boolean(item.signature);
     const docTags = [];
     if (hasDoc) {
-      docTags.push(`<span class="doc-badge" title="Pièce d'identité : ${escapeHTML(item.pieceIdentite.name)}">${adminIcon('file-text', { size: 11 })} CNI / Justificatif</span>`);
+      docTags.push(`<span class="doc-badge" title="Pièce d'identité : ${escapeHTML(item.pieceIdentite.name)}">${adminIcon('file-text', { size: 11 })} CNI</span>`);
     }
     if (hasSig) {
       docTags.push(`<span class="badge badge--success" style="font-size: 0.7rem; padding: 2px 6px;">${adminIcon('check', { size: 10 })} Signé</span>`);
     }
 
     return `
-      <tr data-id="${item.id}" title="Cliquez pour consulter le dossier complet">
+      <tr data-id="${item.id}" class="${isSelected ? 'is-selected' : ''} ${isUnread ? 'is-unread' : ''}" style="${isUnread ? 'font-weight: 600;' : ''}" title="Cliquez pour consulter le dossier complet">
+        ${isSelectMode ? `
+          <td style="width: 44px; text-align: center;">
+            <input type="checkbox" class="demande-row-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''}>
+          </td>
+        ` : ''}
         <td>
-          <div style="font-weight: 600; color: var(--admin-text); font-size: 0.85rem;">
-            ${formatDate(item.createdAt)}
-          </div>
-          <div style="font-size: 0.75rem; color: var(--admin-text-subtle);">
-            ${item.reference ? `<span style="font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(item.reference)}</span>` : (item.createdAt ? new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '')}
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${isUnread ? `<span class="unread-dot" title="Nouveau / Non lu" style="width: 8px; height: 8px; border-radius: 50%; background: var(--admin-gold); display: inline-block; flex-shrink: 0;"></span>` : ''}
+            <div>
+              <div style="font-weight: 600; color: var(--admin-text); font-size: 0.85rem;">
+                ${formatDate(item.createdAt)}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--admin-text-subtle);">
+                ${item.reference ? `<span style="font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(item.reference)}</span>` : (item.createdAt ? new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '')}
+              </div>
+            </div>
           </div>
         </td>
         <td>
@@ -195,12 +311,15 @@ function renderResults() {
             <option value="Nouveau" ${item.status === 'Nouveau' ? 'selected' : ''}>Nouveau</option>
             <option value="En cours" ${item.status === 'En cours' ? 'selected' : ''}>En cours</option>
             <option value="Validé" ${item.status === 'Validé' ? 'selected' : ''}>Validé</option>
-            <option value="Traite" ${item.status === 'Traite' ? 'selected' : ''}>Traité</option>
+            <option value="Traite" ${item.status === 'Traite' || item.status === 'Traité' ? 'selected' : ''}>Traité</option>
             <option value="Rejeté" ${item.status === 'Rejeté' ? 'selected' : ''}>Rejeté</option>
           </select>
         </td>
         <td>
           <div class="table-actions">
+            <button type="button" class="btn-icon btn-toggle-read" data-id="${item.id}" data-read="${isUnread ? '0' : '1'}" title="${isUnread ? 'Marquer comme lu' : 'Marquer comme non lu'}">
+              ${adminIcon(isUnread ? 'check' : 'mail', { size: 15 })}
+            </button>
             <button type="button" class="btn-icon btn-view-demande" data-id="${item.id}" title="Consulter la demande en détail" aria-label="Voir les détails">
               ${adminIcon('eye', { size: 16 })}
             </button>
@@ -222,12 +341,17 @@ function renderResults() {
         <table class="admin-table">
           <thead>
             <tr>
+              ${isSelectMode ? `
+                <th style="width: 44px; text-align: center;">
+                  <input type="checkbox" id="check-all-demandes" ${allChecked ? 'checked' : ''} title="Tout sélectionner">
+                </th>
+              ` : ''}
               <th>Date & Réf</th>
               <th>Type de demande</th>
               <th>Client</th>
               <th>Sujet & Message</th>
               <th>Statut</th>
-              <th style="width: 100px;">Actions</th>
+              <th style="width: 120px;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -242,10 +366,44 @@ function renderResults() {
 }
 
 function bindTableEvents(container) {
+  // Checkbox tout sélectionner
+  container.querySelector('#check-all-demandes')?.addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    const list = getDemandes(currentFilters);
+    list.forEach((item) => {
+      if (checked) selectedDemandeIds.add(String(item.id));
+      else selectedDemandeIds.delete(String(item.id));
+    });
+    renderResults();
+  });
+
+  // Checkbox individuel
+  container.querySelectorAll('.demande-row-checkbox').forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.checked) selectedDemandeIds.add(id);
+      else selectedDemandeIds.delete(id);
+      renderResults();
+    });
+  });
+
+  // Toggle lecture rapide
+  container.querySelectorAll('.btn-toggle-read').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const currentRead = btn.dataset.read === '1';
+      const newRead = currentRead ? 0 : 1;
+      await markDemandeRead(id, newRead);
+      showToast(newRead ? 'Demande marquée comme lue' : 'Demande marquée comme non lue');
+      renderResults();
+    });
+  });
+
   // Ligne de tableau cliquable
   container.querySelectorAll('tbody tr').forEach((tr) => {
     tr.addEventListener('click', (e) => {
-      if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a')) {
+      if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a') || e.target.closest('input[type="checkbox"]')) {
         return;
       }
       openDrawer(tr.dataset.id);
@@ -265,14 +423,16 @@ function bindTableEvents(container) {
 
   // Bouton voir
   container.querySelectorAll('.btn-view-demande').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       openDrawer(btn.dataset.id);
     });
   });
 
   // Bouton supprimer
   container.querySelectorAll('.btn-delete-demande').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const id = btn.dataset.id;
       const ok = await confirmModal({
         title: 'Supprimer la demande',
@@ -281,6 +441,7 @@ function bindTableEvents(container) {
       });
       if (ok) {
         deleteDemande(id);
+        selectedDemandeIds.delete(String(id));
         showToast('Demande supprimée avec succès');
         renderResults();
       }
@@ -298,6 +459,12 @@ function openDrawer(id) {
   if (!demande) return;
 
   activeDemandeId = id;
+
+  // Auto-marquer comme lu à l'ouverture de la demande
+  markDemandeRead(id, 1).then(() => {
+    demande.is_read = 1;
+  });
+
   const drawer = document.getElementById('demande-drawer');
   const backdrop = document.getElementById('drawer-backdrop');
   if (!drawer) return;
@@ -333,7 +500,6 @@ function openDrawer(id) {
   let ficheClientBlock = '';
   if (isFicheClient) {
     ficheClientBlock = `
-      <!-- Nature de l'opération -->
       <div style="margin-bottom: 24px; padding: 18px; background-color: var(--admin-surface-alt); border: 1px solid var(--admin-border); border-radius: var(--radius-sm);">
         <h4 style="margin: 0 0 14px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
           ${adminIcon('building', { size: 16 })} Détails de la constitution de dossier
@@ -346,7 +512,6 @@ function openDrawer(id) {
         </div>
       </div>
 
-      <!-- Pièce d'identité avec fonction inspection / zoom -->
       <div style="margin-bottom: 24px;">
         <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
           ${adminIcon('file-text', { size: 16 })} Justificatif d'identité (CNI, Permis, Passeport)
@@ -394,7 +559,6 @@ function openDrawer(id) {
         `}
       </div>
 
-      <!-- Signature électronique -->
       <div style="margin-bottom: 24px;">
         <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
           ${adminIcon('check', { size: 16 })} Engagement officiel & Signature électronique
@@ -480,7 +644,7 @@ function openDrawer(id) {
       </button>
 
       <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn btn-outline btn-sm" id="drawer-btn-print" title="Imprimer le dossier">
+        <button type="button" class="btn btn-outline btn-sm" id="drawer-btn-print" title="Imprimer le dossier proprement (A4)">
           ${adminIcon('printer', { size: 14 })} Imprimer
         </button>
         ${demande.phone ? `
@@ -509,8 +673,41 @@ function openDrawer(id) {
     renderResults();
   });
 
+  // IMPRESSION PROFESSIONNELLE DÉDIÉE (Sans duplication, sans coupure d'écran)
   document.getElementById('drawer-btn-print')?.addEventListener('click', () => {
-    window.print();
+    const printDetails = [];
+    if (isEstimation) {
+      if (d.type) printDetails.push(['Type de bien', d.type]);
+      if (d.wilaya) printDetails.push(['Wilaya', d.wilaya]);
+      if (d.commune) printDetails.push(['Commune', d.commune]);
+      if (d.quartier) printDetails.push(['Quartier', d.quartier]);
+      if (d.surface) printDetails.push(['Surface habitable', `${d.surface} m²`]);
+      if (d.land) printDetails.push(['Surface terrain', `${d.land} m²`]);
+      if (d.bedrooms) printDetails.push(['Chambres', d.bedrooms]);
+      if (d.bathrooms) printDetails.push(['Salles de bain', d.bathrooms]);
+      if (d.garage) printDetails.push(['Garage / Parking', d.garage]);
+    } else if (isFicheClient) {
+      printDetails.push(['Opération', demande.transaction || 'Demande']);
+      printDetails.push(['Type de bien recherché', demande.typeBien || 'Appartement']);
+      printDetails.push(['Engagement formel', 'Honoraires d\'agence acceptés']);
+    }
+
+    printDocument({
+      title: isEstimation ? 'Fiche d\'estimation immobilière' : (isFicheClient ? 'Dossier officiel de constitution client' : 'Fiche de prise de contact client'),
+      type: demande.type || 'Contact',
+      reference: demande.reference || `DEM-${demande.id}`,
+      date: formatDateTime(demande.createdAt),
+      status: demande.status,
+      client: {
+        nom: demande.nom,
+        phone: demande.phone,
+        email: demande.email
+      },
+      details: printDetails,
+      message: demande.message,
+      signature: demande.signature,
+      attachment: demande.pieceIdentite
+    });
   });
 
   document.getElementById('drawer-btn-delete')?.addEventListener('click', async () => {
@@ -521,13 +718,14 @@ function openDrawer(id) {
     });
     if (ok) {
       deleteDemande(id);
+      selectedDemandeIds.delete(String(id));
       showToast('Demande supprimée');
       closeDrawer();
       renderResults();
     }
   });
 
-  // Écouteurs pour agrandir la pièce d'identité en Lightbox
+  // Lightbox pièce d'identité
   drawer.querySelectorAll('.btn-zoom-doc').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -583,4 +781,3 @@ function closeDrawer() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-

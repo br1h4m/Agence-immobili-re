@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 require_once __DIR__ . '/../backend/bootstrap.php';
 ?>
 <!DOCTYPE html>
@@ -7,7 +6,7 @@ require_once __DIR__ . '/../backend/bootstrap.php';
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Utilisateurs & Équipe — Administration Imolode</title>
+  <title>Utilisateurs & Ã‰quipe â€” Administration Imolode</title>
   <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,18 +22,15 @@ require_once __DIR__ . '/../backend/bootstrap.php';
 
       <main class="admin-content" id="utilisateurs-content">
         <div style="padding: 40px; text-align: center; color: var(--admin-text-muted);">
-          Chargement des utilisateurs...
+          Chargement de l'Ã©quipe et des utilisateurs...
         </div>
       </main>
     </div>
   </div>
 
-  <!-- Volet d'ajout / modification d'utilisateur -->
-  <div class="admin-drawer" id="user-drawer" aria-hidden="true"></div>
-  <div class="sidebar-backdrop" id="user-drawer-backdrop"></div>
+  <div class="drawer-backdrop" id="user-drawer-backdrop"></div>
+  <aside class="drawer" id="user-drawer" role="dialog" aria-modal="true"></aside>
 
   <script type="module" src="/admin/utilisateurs.js"></script>
 </body>
 </html>
-
-

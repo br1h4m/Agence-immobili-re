@@ -30,6 +30,9 @@ try {
     $rDemandesNouvelles = $conn->query("SELECT COUNT(*) AS total FROM `demandes` WHERE `statut` = 'Nouveau'");
     $demandesNouvelles = (int)($rDemandesNouvelles->fetch_assoc()['total'] ?? 0);
 
+    $rDemandesNonLues = $conn->query("SELECT COUNT(*) AS total FROM `demandes` WHERE `is_read` = 0");
+    $demandesNonLues = (int)($rDemandesNonLues->fetch_assoc()['total'] ?? 0);
+
     // 3. Fiches clients
     $rFichesTotal = $conn->query("SELECT COUNT(*) AS total FROM `fiches_client`");
     $totalFiches = (int)($rFichesTotal->fetch_assoc()['total'] ?? 0);
@@ -37,14 +40,21 @@ try {
     $rFichesNouvelles = $conn->query("SELECT COUNT(*) AS total FROM `fiches_client` WHERE `statut` = 'Nouveau'");
     $fichesNouvelles = (int)($rFichesNouvelles->fetch_assoc()['total'] ?? 0);
 
+    $rFichesNonLues = $conn->query("SELECT COUNT(*) AS total FROM `fiches_client` WHERE `is_read` = 0");
+    $fichesNonLues = (int)($rFichesNonLues->fetch_assoc()['total'] ?? 0);
+
     echo json_encode([
         'biens_total' => $totalBiens,
         'biens_disponibles' => $biensDispo,
         'biens_finalises' => $biensVendus,
         'demandes_total' => $totalDemandes,
         'demandes_nouvelles' => $demandesNouvelles,
+        'demandes_non_lues' => $demandesNonLues,
+        'unreadDemandes' => $demandesNonLues,
         'fiches_total' => $totalFiches,
-        'fiches_nouvelles' => $fichesNouvelles
+        'fiches_nouvelles' => $fichesNouvelles,
+        'fiches_non_lues' => $fichesNonLues,
+        'unreadFichesClient' => $fichesNonLues
     ]);
 } catch (Exception $e) {
     http_response_code(500);

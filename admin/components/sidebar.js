@@ -14,8 +14,8 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
   const items = [
     { key: 'dashboard', label: 'Tableau de bord', href: '/admin/', icon: 'dashboard' },
     { key: 'biens', label: 'Biens immobiliers', href: '/admin/biens', icon: 'building' },
-    { key: 'demandes', label: 'Demandes', href: '/admin/demandes', icon: 'mail', badge: pendingCount > 0 ? pendingCount : null },
-    { key: 'fiches-client', label: 'Fiches client', href: '/admin/fiches-client', icon: 'file-text', badge: pendingFiches > 0 ? pendingFiches : null },
+    { key: 'demandes', label: 'Demandes', href: '/admin/demandes', icon: 'mail', badge: pendingCount > 0 ? pendingCount : null, badgeId: 'badge-demandes' },
+    { key: 'fiches-client', label: 'Fiches client', href: '/admin/fiches-client', icon: 'file-text', badge: pendingFiches > 0 ? pendingFiches : null, badgeId: 'badge-fiches' },
     { key: 'utilisateurs', label: 'Utilisateurs', href: '/admin/utilisateurs', icon: 'users' },
     { key: 'parametres', label: 'Paramètres', href: '/admin/parametres', icon: 'settings' }
   ];
@@ -27,7 +27,7 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
         <a href="${item.href}" class="sidebar-link${isActive ? ' is-active' : ''}">
           <span class="sidebar-icon">${adminIcon(item.icon, { size: 18 })}</span>
           <span class="sidebar-label">${item.label}</span>
-          ${item.badge ? `<span class="sidebar-badge">${item.badge}</span>` : ''}
+          ${item.badgeId ? `<span class="sidebar-badge" id="${item.badgeId}" style="${item.badge ? '' : 'display:none;'}">${item.badge || 0}</span>` : (item.badge ? `<span class="sidebar-badge">${item.badge}</span>` : '')}
         </a>
       </li>
     `;
@@ -61,8 +61,10 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
           <span>Voir le site public</span>
         </a>
 
-        <div class="sidebar-user">
-          <div class="user-avatar">${escapeHTML(user.nom?.charAt(0) || 'A')}</div>
+        <div class="sidebar-user" id="sidebar-user-profile" style="cursor: pointer;" title="Modifier mes informations personnelles">
+          <div class="user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: var(--admin-primary); color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; overflow: hidden;">
+            ${user.avatar ? `<img src="${escapeHTML(user.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : escapeHTML(user.nom?.charAt(0) || 'A')}
+          </div>
           <div class="user-meta">
             <p class="user-name">${escapeHTML(user.nom || 'Admin')}</p>
             <p class="user-role">${escapeHTML(user.role || 'Administrateur')}</p>

@@ -31,6 +31,8 @@ function format_fiche_row(array $r): array {
         'typeBien'  => $r['type_bien'],
         'idBien'    => $r['id_bien'],
         'status'    => $r['statut'],
+        'is_read'   => (int)($r['is_read'] ?? 0),
+        'isRead'    => (bool)($r['is_read'] ?? 0),
         'createdAt' => $r['date_creation']
     ]);
 }
@@ -101,6 +103,66 @@ try {
                 $stmt->bind_param("si", $statut, $id);
                 $stmt->execute();
                 echo json_encode(['success' => true, 'message' => 'Statut mis à jour']);
+                exit;
+            }
+
+            // Marquer comme lu
+            if ($action === 'mark_read') {
+                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+                if (!$id) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'ID requis']);
+                    exit;
+                }
+                $stmt = $conn->prepare("UPDATE `fiches_client` SET `is_read` = 1 WHERE `id` = ?");
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                echo json_encode(['success' => true, 'message' => 'Fiche client marquée comme lue']);
+                exit;
+            }
+
+            // Marquer comme non lu
+            if ($action === 'mark_unread') {
+                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+                if (!$id) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'ID requis']);
+                    exit;
+                }
+                $stmt = $conn->prepare("UPDATE `fiches_client` SET `is_read` = 0 WHERE `id` = ?");
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                echo json_encode(['success' => true, 'message' => 'Fiche client marquée comme non lue']);
+                exit;
+            }
+
+            // Marquer plusieurs comme lu
+            if ($action === 'bulk_mark_read') {
+                $ids = $input['ids'] ?? [];
+                if (!is_array($ids) || empty($ids)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'Liste des IDs requise']);
+                    exit;
+                }
+                $intIds = array_map('intval', $ids);
+                $inClause = implode(',', $intIds);
+                $conn->query("UPDATE `fiches_client` SET `is_read` = 1 WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' fiche(s) marquée(s) comme lue(s)']);
+                exit;
+            }
+
+            // Suppression multiple
+            if ($action === 'bulk_delete') {
+                $ids = $input['ids'] ?? [];
+                if (!is_array($ids) || empty($ids)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'Liste des IDs requise']);
+                    exit;
+                }
+                $intIds = array_map('intval', $ids);
+                $inClause = implode(',', $intIds);
+                $conn->query("DELETE FROM `fiches_client` WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' fiche(s) supprimée(s)']);
                 exit;
             }
 

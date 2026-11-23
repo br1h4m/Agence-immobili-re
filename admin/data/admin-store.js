@@ -126,11 +126,12 @@ function writeStorage(key, data) {
  */
 export async function syncWithBackend() {
   try {
-    const [resProps, resDemandes, resFiches, resSettings] = await Promise.all([
+    const [resProps, resDemandes, resFiches, resSettings, resUsers] = await Promise.all([
       fetch('/api/properties.php').then(r => r.ok ? r.json() : null),
       fetch('/api/demandes.php').then(r => r.ok ? r.json() : null),
       fetch('/api/fiches-client.php').then(r => r.ok ? r.json() : null),
-      fetch('/api/settings.php').then(r => r.ok ? r.json() : null)
+      fetch('/api/settings.php').then(r => r.ok ? r.json() : null),
+      fetch('/api/users.php').then(r => r.ok ? r.json() : null)
     ]);
 
     if (Array.isArray(resProps) && resProps.length > 0) {
@@ -144,6 +145,9 @@ export async function syncWithBackend() {
     }
     if (resSettings && typeof resSettings === 'object') {
       writeStorage(KEY_SETTINGS, resSettings);
+    }
+    if (Array.isArray(resUsers) && resUsers.length > 0) {
+      writeStorage(KEY_USERS, resUsers);
     }
   } catch (err) {
     // Mode dégradé si serveur injoignable
@@ -660,3 +664,175 @@ export function getDashboardStats() {
     recentFichesClient
   };
 }
+
+/* ==========================================================================
+   Opérations multiples (Bulk) & Gestion de la lecture (is_read)
+   ========================================================================== */
+
+export async function bulkDeleteProperties(ids = []) {
+  if (!ids.length) return false;
+  const strIds = ids.map(String);
+  const list = readStorage(KEY_PROPERTIES, PROPERTIES);
+  const filtered = list.filter((p) => !strIds.includes(String(p.id)));
+  writeStorage(KEY_PROPERTIES, filtered);
+
+  try {
+    const res = await fetch('/api/properties.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk_delete', ids })
+    });
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function bulkDeleteDemandes(ids = []) {
+  if (!ids.length) return false;
+  const strIds = ids.map(String);
+  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  writeStorage(KEY_DEMANDES, demandes.filter((d) => !strIds.includes(String(d.id))));
+  writeStorage(KEY_FICHES_CLIENT, fiches.filter((f) => !strIds.includes(String(f.id))));
+
+  try {
+    await Promise.all([
+      fetch('/api/demandes.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bulk_delete', ids })
+      }).catch(() => {}),
+      fetch('/api/fiches-client.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bulk_delete', ids })
+      }).catch(() => {})
+    ]);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function bulkDeleteFichesClient(ids = []) {
+  if (!ids.length) return false;
+  const strIds = ids.map(String);
+  const list = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const filtered = list.filter((f) => !strIds.includes(String(f.id)));
+  writeStorage(KEY_FICHES_CLIENT, filtered);
+
+  try {
+    const res = await fetch('/api/fiches-client.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk_delete', ids })
+    });
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function bulkDeleteUsers(ids = []) {
+  if (!ids.length) return false;
+  const strIds = ids.map(String);
+  const list = getUsers();
+  const filtered = list.filter((u) => !strIds.includes(String(u.id)));
+  writeStorage(KEY_USERS, filtered);
+
+  try {
+    const res = await fetch('/api/users.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk_delete', ids })
+    });
+    const data = await res.json();
+    return data?.success !== false;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function markDemandeRead(id, is_read = 1) {
+  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const target = demandes.find((d) => String(d.id) === String(id));
+  if (target) {
+    target.is_read = is_read;
+    writeStorage(KEY_DEMANDES, demandes);
+  }
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const targetFiche = fiches.find((f) => String(f.id) === String(id));
+  if (targetFiche) {
+    targetFiche.is_read = is_read;
+    writeStorage(KEY_FICHES_CLIENT, fiches);
+  }
+
+  try {
+    await fetch('/api/demandes.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark_read', id, is_read })
+    });
+  } catch (_) {}
+}
+
+export async function bulkMarkDemandesRead(ids = [], is_read = 1) {
+  if (!ids.length) return false;
+  const strIds = ids.map(String);
+  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  demandes.forEach((d) => {
+    if (strIds.includes(String(d.id))) d.is_read = is_read;
+  });
+  writeStorage(KEY_DEMANDES, demandes);
+
+  try {
+    await fetch('/api/demandes.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function markFicheRead(id, is_read = 1) {
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  const target = fiches.find((f) => String(f.id) === String(id));
+  if (target) {
+    target.is_read = is_read;
+    writeStorage(KEY_FICHES_CLIENT, fiches);
+  }
+
+  try {
+    await fetch('/api/fiches-client.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark_read', id, is_read })
+    });
+  } catch (_) {}
+}
+
+export async function bulkMarkFichesRead(ids = [], is_read = 1) {
+  if (!ids.length) return false;
+  const strIds = ids.map(String);
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  fiches.forEach((f) => {
+    if (strIds.includes(String(f.id))) f.is_read = is_read;
+  });
+  writeStorage(KEY_FICHES_CLIENT, fiches);
+
+  try {
+    await fetch('/api/fiches-client.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+

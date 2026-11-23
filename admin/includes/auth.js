@@ -102,6 +102,14 @@ export async function login(email, password) {
   return { success: false, message: 'Identifiants incorrects. Utilisez gahamhocine2@gmail.com / admin123 ou admin@immolode.dz / admin123' };
 }
 
+export function updateLocalUser(updatedUser) {
+  const session = getSession();
+  if (session && updatedUser) {
+    session.user = { ...session.user, ...updatedUser };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
+}
+
 export async function logout() {
   try {
     await fetch('/api/auth.php?action=logout', { method: 'POST' });

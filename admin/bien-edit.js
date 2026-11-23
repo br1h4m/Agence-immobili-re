@@ -2,16 +2,123 @@
 import {
   initAdminLayout, adminIcon, showToast, escapeHTML
 } from '/admin/assets/js/admin.js';
-import { getPropertyById, saveProperty } from '/admin/data/admin-store.js';
+import { getPropertyById, saveProperty, getProperties } from '/admin/data/admin-store.js';
 
-const SAMPLE_IMAGES = [
-  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'
+// Dictionnaire algérien complet Wilayas -> Communes & Quartiers majeurs
+export const ALGERIA_LOCATIONS = {
+  "Béjaïa": [
+    "Béjaïa (Centre)", "Tichy", "Aokas", "Souk El Ténine", "Akbou", "El Kseur",
+    "Amizour", "Sidi Aïch", "Tazmalt", "Kherrata", "Adekar", "Ouzellaguen",
+    "Darguina", "Barbacha", "Chemini", "Ighram", "Beni Maouche", "Tifra"
+  ],
+  "Alger": [
+    "Alger Centre", "Hydra", "El Biar", "Ben Aknoun", "Chéraga", "Dely Ibrahim",
+    "Zéralda", "Staoueli", "Kouba", "Bir Mourad Raïs", "Hussein Dey", "Bab El Oued",
+    "Bouzaréah", "Bab Ezzouar", "Bordj El Kiffan", "Rouïba", "Dar El Beïda",
+    "Saoula", "Draria", "Birtouta", "Ain Benian", "Bologhine"
+  ],
+  "Oran": [
+    "Oran (Centre)", "Bir El Djir", "Es Senia", "Ain El Turk", "Arzew",
+    "Mers El Kebir", "Bethioua", "Canastel", "Akid Lotfi", "Gdyel", "El Kerma"
+  ],
+  "Constantine": [
+    "Constantine (Centre)", "Ali Mendjeli", "El Khroub", "Ain Smara",
+    "Hamma Bouziane", "Zighoud Youcef", "Didouche Mourad"
+  ],
+  "Sétif": [
+    "Sétif (Centre)", "El Eulma", "Ain Arnat", "Ain Oulmene", "Bouandas", "Beni Aziz"
+  ],
+  "Blida": [
+    "Blida (Centre)", "Boufarik", "Ouled Yaich", "Mouzaia", "Larbaa", "Bougara", "El Affroun"
+  ],
+  "Tizi Ouzou": [
+    "Tizi Ouzou (Centre)", "Azazga", "Tigzirt", "Draa Ben Khedda", "Boghni",
+    "Larbaa Nath Irathen", "Azeffoun", "Ouadhia"
+  ],
+  "Boumerdès": [
+    "Boumerdès (Centre)", "Zemmouri", "Dellys", "Bordj Menaiel", "Corso",
+    "Thénia", "Khemis El Khechna", "Boudouaou"
+  ],
+  "Tipaza": [
+    "Tipaza (Centre)", "Cherchell", "Kolea", "Bou Ismail", "Fouka",
+    "Hadjout", "Douaouda", "Bousmail"
+  ],
+  "Annaba": [
+    "Annaba (Centre)", "El Bouni", "Sidi Amar", "Berrahal", "El Hadjar", "Seraïdi"
+  ],
+  "Tlemcen": [
+    "Tlemcen (Centre)", "Mansourah", "Chetouane", "Maghnia", "Remchi", "Ghazaouet"
+  ],
+  "Mostaganem": [
+    "Mostaganem (Centre)", "Ain Tedeles", "Hassi Mameche", "Sidi Lakhdar", "Mazagran"
+  ],
+  "Jijel": [
+    "Jijel (Centre)", "Taher", "El Milia", "Ziama Mansouriah", "Texenna"
+  ]
+};
+
+// Galerie d'images sélectionnées par thématiques professionnelles
+const CURATED_GALLERY = [
+  {
+    category: 'Villas & Extérieurs',
+    title: 'Villa contemporaine avec piscine',
+    url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Villas & Extérieurs',
+    title: 'Façade d\'architecte moderne',
+    url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Villas & Extérieurs',
+    title: 'Villa d\'exception avec jardin paysager',
+    url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Villas & Extérieurs',
+    title: 'Propriété de luxe avec terrasse panoramique',
+    url: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Appartements & Salons',
+    title: 'Grand séjour lumineux et ouvert',
+    url: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Appartements & Salons',
+    title: 'Salon moderne haut standing',
+    url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Appartements & Salons',
+    title: 'Appartement contemporain avec baie vitrée',
+    url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Cuisines & Suites',
+    title: 'Cuisine équipée moderne îlot central',
+    url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Cuisines & Suites',
+    title: 'Suite parentale spacieuse',
+    url: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Cuisines & Suites',
+    title: 'Salle de bain design marbre',
+    url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Bureaux & Commerces',
+    title: 'Immeuble de bureaux contemporain',
+    url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    category: 'Bureaux & Commerces',
+    title: 'Plateau bureau moderne et lumineux',
+    url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'
+  }
 ];
 
 const ALL_FEATURES = [
@@ -53,7 +160,10 @@ async function init() {
   const root = document.getElementById('bien-edit-content');
   if (!root) return;
 
-  currentImages = property?.images ? [...property.images] : [SAMPLE_IMAGES[0]];
+  currentImages = property?.images ? [...property.images] : [CURATED_GALLERY[0].url];
+
+  const currentWilaya = property?.location?.wilaya || 'Béjaïa';
+  const currentCity = property?.location?.city || 'Béjaïa';
 
   root.innerHTML = `
     <form id="property-form">
@@ -83,7 +193,7 @@ async function init() {
             <div class="form-grid">
               <div class="form-col-8 form-group">
                 <label class="form-label" for="prop-title">Titre de l'annonce <span class="required">*</span></label>
-                <input type="text" id="prop-title" name="title" class="form-input" required placeholder="ex. Villa contemporaine avec vue dégagée" value="${escapeHTML(property?.title || '')}">
+                <input type="text" id="prop-title" name="title" class="form-input" required placeholder="ex. Villa contemporaine avec vue mer à Tichy" value="${escapeHTML(property?.title || '')}">
               </div>
 
               <div class="form-col-4 form-group">
@@ -163,27 +273,33 @@ async function init() {
             </div>
           </div>
 
-          <!-- Section 3 : Localisation -->
+          <!-- Section 3 : Localisation dynamique liée Wilaya -> Communes -->
           <div class="form-section">
             <h3 class="form-section-title">
               ${adminIcon('phone', { size: 18 })}
-              <span>Localisation</span>
+              <span>Localisation (Wilaya & Commune liées)</span>
             </h3>
 
             <div class="form-grid">
               <div class="form-col-4 form-group">
-                <label class="form-label" for="prop-wilaya">Wilaya <span class="required">*</span></label>
-                <input type="text" id="prop-wilaya" name="wilaya" class="form-input" required placeholder="ex. Béjaïa" value="${escapeHTML(property?.location?.wilaya || '')}">
+                <label class="form-label" for="prop-wilaya-select">Wilaya <span class="required">*</span></label>
+                <select id="prop-wilaya-select" name="wilaya" class="form-select" required>
+                  ${Object.keys(ALGERIA_LOCATIONS).map((w) => `
+                    <option value="${escapeHTML(w)}" ${w.toLowerCase() === currentWilaya.toLowerCase() ? 'selected' : ''}>${escapeHTML(w)}</option>
+                  `).join('')}
+                </select>
               </div>
 
               <div class="form-col-4 form-group">
-                <label class="form-label" for="prop-city">Commune / Ville <span class="required">*</span></label>
-                <input type="text" id="prop-city" name="city" class="form-input" required placeholder="ex. Béjaïa" value="${escapeHTML(property?.location?.city || '')}">
+                <label class="form-label" for="prop-city-select">Commune / Ville <span class="required">*</span></label>
+                <select id="prop-city-select" name="city" class="form-select" required>
+                  <!-- Rempli dynamiquement en JS selon la wilaya -->
+                </select>
               </div>
 
               <div class="form-col-4 form-group">
                 <label class="form-label" for="prop-district">Quartier / Adresse</label>
-                <input type="text" id="prop-district" name="district" class="form-input" placeholder="ex. Tichy, Côte Ouest..." value="${escapeHTML(property?.location?.district || '')}">
+                <input type="text" id="prop-district" name="district" class="form-input" placeholder="ex. Boulevard de la Soummam, Côte Ouest..." value="${escapeHTML(property?.location?.district || '')}">
               </div>
             </div>
           </div>
@@ -273,7 +389,7 @@ async function init() {
             </div>
           </div>
 
-          <!-- Section 7 : Galerie Photos -->
+          <!-- Section 7 : Galerie Photos & Sélection depuis la Galerie de l'agence -->
           <div class="form-section">
             <h3 class="form-section-title">
               ${adminIcon('eye', { size: 18 })}
@@ -281,18 +397,26 @@ async function init() {
             </h3>
 
             <p style="font-size: 0.82rem; color: var(--admin-text-muted); margin: 0 0 12px;">
-              Ajoutez des URLs d'images hébergées (ex. Unsplash, Cloudinary, ou vos liens directs). La première photo servira de couverture principale.
+              Choisissez des photos depuis notre galerie officielle, téléchargez une image depuis votre appareil ou renseignez un lien URL direct.
             </p>
 
-            <div class="image-add-box">
-              <input type="url" id="new-image-url" class="form-input" placeholder="https://images.unsplash.com/...">
+            <div class="image-add-box" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+              <input type="url" id="new-image-url" class="form-input" style="flex: 1; min-width: 250px;" placeholder="Coller une URL d'image (https://...)">
               <button type="button" class="btn btn-outline" id="btn-add-image">
                 ${adminIcon('plus', { size: 15 })}
-                <span>Ajouter</span>
+                <span>Ajouter l'URL</span>
               </button>
-              <button type="button" class="btn btn-outline" id="btn-sample-image" title="Ajouter une photo exemple moderne">
-                Photo d'exemple
+              
+              <button type="button" class="btn btn-primary" id="btn-open-gallery-picker" style="background: var(--admin-gold); color: #fff; border: none;">
+                ${adminIcon('eye', { size: 15 })}
+                <span>Choisir depuis notre galerie</span>
               </button>
+
+              <button type="button" class="btn btn-outline" id="btn-upload-file">
+                ${adminIcon('upload', { size: 15 })}
+                <span>Téléverser un fichier</span>
+              </button>
+              <input type="file" id="local-file-input" accept="image/*" multiple style="display: none;">
             </div>
 
             <div class="images-gallery-editor" id="images-container">
@@ -311,10 +435,68 @@ async function init() {
         </div>
       </div>
     </form>
+
+    <!-- Modal Sélecteur de Galerie Officielle Immolode -->
+    <div id="gallery-picker-modal" class="admin-modal" hidden style="position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px;">
+      <div class="admin-modal-card" style="background: var(--admin-surface); border-radius: var(--radius-sm); max-width: 900px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); border: 1px solid var(--admin-border);">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600;">Galerie d'images Immolode</h3>
+            <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--admin-text-muted);">Cliquez sur les photos pour les ajouter à votre bien</p>
+          </div>
+          <button type="button" class="btn-icon" id="btn-close-gallery-modal">${adminIcon('close', { size: 18 })}</button>
+        </div>
+
+        <!-- Filtres par catégorie -->
+        <div style="padding: 10px 20px; background: var(--admin-surface-alt); border-bottom: 1px solid var(--admin-border); display: flex; gap: 8px; flex-wrap: wrap;" id="gallery-cat-pills">
+          <button type="button" class="btn btn-outline btn-sm is-active" data-cat="all">Toutes</button>
+          <button type="button" class="btn btn-outline btn-sm" data-cat="Villas & Extérieurs">Villas & Extérieurs</button>
+          <button type="button" class="btn btn-outline btn-sm" data-cat="Appartements & Salons">Appartements & Salons</button>
+          <button type="button" class="btn btn-outline btn-sm" data-cat="Cuisines & Suites">Cuisines & Suites</button>
+          <button type="button" class="btn btn-outline btn-sm" data-cat="Bureaux & Commerces">Bureaux & Commerces</button>
+        </div>
+
+        <!-- Grille des photos de la galerie -->
+        <div style="padding: 20px; overflow-y: auto; flex: 1;" id="gallery-grid-items">
+          <!-- Injecté dynamiquement -->
+        </div>
+
+        <div style="padding: 14px 20px; border-top: 1px solid var(--admin-border); display: flex; justify-content: space-between; align-items: center; background: var(--admin-surface-alt);">
+          <span id="gallery-selected-count" style="font-size: 0.85rem; color: var(--admin-text-muted);">0 photo sélectionnée</span>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-gallery-modal">Annuler</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-insert-gallery-photos">Insérer dans le bien</button>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
+  setupWilayaCommuneLinkage(currentWilaya, currentCity);
   renderImagesList();
   bindFormEvents(property, isEdit);
+  setupGalleryModal();
+}
+
+function setupWilayaCommuneLinkage(defaultWilaya, defaultCity) {
+  const wilayaSelect = document.getElementById('prop-wilaya-select');
+  const citySelect = document.getElementById('prop-city-select');
+  if (!wilayaSelect || !citySelect) return;
+
+  function updateCities(wilayaName, selectedCity = '') {
+    const cities = ALGERIA_LOCATIONS[wilayaName] || [wilayaName];
+    citySelect.innerHTML = cities.map((c) => `
+      <option value="${escapeHTML(c)}" ${c.toLowerCase() === selectedCity.toLowerCase() ? 'selected' : ''}>${escapeHTML(c)}</option>
+    `).join('');
+  }
+
+  // Initialisation
+  updateCities(wilayaSelect.value || defaultWilaya, defaultCity);
+
+  // Écouteur de changement de Wilaya
+  wilayaSelect.addEventListener('change', (e) => {
+    updateCities(e.target.value);
+  });
 }
 
 function renderImagesList() {
@@ -327,10 +509,11 @@ function renderImagesList() {
   }
 
   container.innerHTML = currentImages.map((imgUrl, idx) => `
-    <div class="image-preview-card" title="Image ${idx + 1}">
-      <img src="${escapeHTML(imgUrl)}" alt="Photo ${idx + 1}" onerror="this.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80'">
-      <button type="button" class="image-remove-btn btn-remove-image" data-index="${idx}" title="Supprimer cette photo">
-        ${adminIcon('close', { size: 14 })}
+    <div class="image-preview-card" style="position: relative; border-radius: var(--radius-xs); overflow: hidden; border: 1px solid var(--admin-border);" title="Photo ${idx + 1} ${idx === 0 ? '(Couverture principale)' : ''}">
+      <img src="${escapeHTML(imgUrl)}" alt="Photo ${idx + 1}" style="width: 100%; height: 110px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80'">
+      ${idx === 0 ? `<span style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 2px;">Couverture</span>` : ''}
+      <button type="button" class="image-remove-btn btn-remove-image" data-index="${idx}" title="Supprimer cette photo" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        ${adminIcon('close', { size: 12 })}
       </button>
     </div>
   `).join('');
@@ -345,28 +528,141 @@ function renderImagesList() {
   });
 }
 
+let gallerySelectedUrls = new Set();
+
+function setupGalleryModal() {
+  const modal = document.getElementById('gallery-picker-modal');
+  const openBtn = document.getElementById('btn-open-gallery-picker');
+  const closeBtn = document.getElementById('btn-close-gallery-modal');
+  const cancelBtn = document.getElementById('btn-cancel-gallery-modal');
+  const insertBtn = document.getElementById('btn-insert-gallery-photos');
+  const countSpan = document.getElementById('gallery-selected-count');
+  const gridContainer = document.getElementById('gallery-grid-items');
+
+  if (!modal || !openBtn) return;
+
+  function renderGallery(cat = 'all') {
+    if (!gridContainer) return;
+    const filtered = cat === 'all'
+      ? CURATED_GALLERY
+      : CURATED_GALLERY.filter((item) => item.category === cat);
+
+    gridContainer.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;">
+        ${filtered.map((item) => {
+          const isSel = gallerySelectedUrls.has(item.url);
+          return `
+            <div class="gallery-picker-item" data-url="${escapeHTML(item.url)}" style="border: 2px solid ${isSel ? 'var(--admin-gold)' : 'var(--admin-border)'}; border-radius: var(--radius-xs); overflow: hidden; cursor: pointer; position: relative; background: var(--admin-surface-alt); transition: all 0.2s ease;">
+              <img src="${escapeHTML(item.url)}" alt="${escapeHTML(item.title)}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
+              <div style="padding: 6px 8px; font-size: 0.75rem; font-weight: 500; color: var(--admin-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHTML(item.title)}
+              </div>
+              ${isSel ? `
+                <div style="position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: var(--admin-gold); color: #fff; display: flex; align-items: center; justify-content: center;">
+                  ${adminIcon('check', { size: 14 })}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    gridContainer.querySelectorAll('.gallery-picker-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        const url = item.dataset.url;
+        if (gallerySelectedUrls.has(url)) {
+          gallerySelectedUrls.delete(url);
+        } else {
+          gallerySelectedUrls.add(url);
+        }
+        if (countSpan) countSpan.textContent = `${gallerySelectedUrls.size} photo${gallerySelectedUrls.size > 1 ? 's' : ''} sélectionnée${gallerySelectedUrls.size > 1 ? 's' : ''}`;
+        renderGallery(currentCat);
+      });
+    });
+  }
+
+  let currentCat = 'all';
+
+  document.querySelectorAll('#gallery-cat-pills button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#gallery-cat-pills button').forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      currentCat = btn.dataset.cat;
+      renderGallery(currentCat);
+    });
+  });
+
+  const openModal = () => {
+    gallerySelectedUrls.clear();
+    if (countSpan) countSpan.textContent = '0 photo sélectionnée';
+    modal.style.display = 'flex';
+    modal.hidden = false;
+    renderGallery(currentCat);
+  };
+
+  const closeModal = () => {
+    modal.style.display = 'none';
+    modal.hidden = true;
+  };
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', closeModal);
+
+  insertBtn?.addEventListener('click', () => {
+    if (gallerySelectedUrls.size > 0) {
+      gallerySelectedUrls.forEach((url) => {
+        if (!currentImages.includes(url)) {
+          currentImages.push(url);
+        }
+      });
+      renderImagesList();
+      showToast(`${gallerySelectedUrls.size} photo(s) ajoutée(s) à la galerie du bien`);
+    }
+    closeModal();
+  });
+}
+
 function bindFormEvents(existingProperty, isEdit) {
   const form = document.getElementById('property-form');
   const newImgInput = document.getElementById('new-image-url');
   const addImgBtn = document.getElementById('btn-add-image');
-  const sampleImgBtn = document.getElementById('btn-sample-image');
+  const uploadBtn = document.getElementById('btn-upload-file');
+  const fileInput = document.getElementById('local-file-input');
 
-  // Ajout d'image manuelle
+  // Ajout par URL
   addImgBtn?.addEventListener('click', () => {
     const val = newImgInput?.value.trim();
     if (val) {
       currentImages.push(val);
       if (newImgInput) newImgInput.value = '';
       renderImagesList();
+      showToast('Image ajoutée');
     }
   });
 
-  // Ajout de photo d'exemple aléatoire
-  sampleImgBtn?.addEventListener('click', () => {
-    const randomImg = SAMPLE_IMAGES[Math.floor(Math.random() * SAMPLE_IMAGES.length)];
-    currentImages.push(randomImg);
-    renderImagesList();
-    showToast('Photo d\'exemple ajoutée');
+  // Téléversement de fichier local
+  uploadBtn?.addEventListener('click', () => {
+    fileInput?.click();
+  });
+
+  fileInput?.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        const base64 = loadEvent.target.result;
+        currentImages.push(base64);
+        renderImagesList();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    showToast(`${files.length} fichier(s) téléversé(s)`);
+    fileInput.value = '';
   });
 
   // Soumission du formulaire
@@ -385,8 +681,8 @@ function bindFormEvents(existingProperty, isEdit) {
     const price = Number(fd.get('price')) || 0;
     const pricePeriod = fd.get('pricePeriod')?.toString() || null;
 
-    const wilaya = fd.get('wilaya')?.toString().trim() || '';
-    const city = fd.get('city')?.toString().trim() || '';
+    const wilaya = fd.get('wilaya')?.toString().trim() || 'Béjaïa';
+    const city = fd.get('city')?.toString().trim() || 'Béjaïa';
     const district = fd.get('district')?.toString().trim() || '';
 
     const surface = Number(fd.get('surface')) || 0;
@@ -406,7 +702,7 @@ function bindFormEvents(existingProperty, isEdit) {
     const description = fd.get('description')?.toString().trim() || '';
 
     if (currentImages.length === 0) {
-      currentImages.push(SAMPLE_IMAGES[0]);
+      currentImages.push(CURATED_GALLERY[0].url);
     }
 
     const payload = {
