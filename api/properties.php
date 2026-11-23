@@ -1,14 +1,16 @@
 <?php
 /**
  * ============================================================================
- * api/properties.php - API de gestion des biens immobiliers
+ * api/properties.php - API REST des biens immobiliers
  * ============================================================================
- * Requêtes préparées MySQLi (sans PDO).
+ * Traitement en PHP simple avec requêtes MySQL préparées (MySQLi sans PDO).
+ * Permet de récupérer, ajouter, modifier ou supprimer des biens.
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/db.php';
 
+// Entêtes CORS et format JSON
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -23,102 +25,100 @@ $method = $_SERVER['REQUEST_METHOD'];
 $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true) ?: $_POST;
 
+/**
+ * Fonction de formatage pour assurer la compatibilité ascendante
+ * avec les composants JavaScript et les vues PHP
+ */
 function format_property_row(array $r): array {
     $images = json_decode($r['images'] ?? '[]', true) ?: [];
     $equip  = json_decode($r['equipements'] ?? '[]', true) ?: [];
 
-    return [
+    return array_merge($r, [
         'id'          => (int)$r['id'],
-        'reference'   => $r['reference'],
         'title'       => $r['titre'],
-        'titre'       => $r['titre'],
-        'type'        => $r['type'],
-        'transaction' => $r['transaction'],
         'price'       => (float)$r['prix'],
-        'prix'        => (float)$r['prix'],
-        'pricePeriod' => $r['periode_prix'],
-        'periode_prix'=> $r['periode_prix'],
+        'pricePeriod' => $r['periode_prix'] ?? null,
         'surface'     => (float)$r['surface'],
-        'landSurface' => isset($r['surface_terrain']) ? (float)$r['surface_terrain'] : null,
-        'surface_terrain' => isset($r['surface_terrain']) ? (float)$r['surface_terrain'] : null,
+        'landSurface' => !empty($r['surface_terrain']) ? (float)$r['surface_terrain'] : null,
         'bedrooms'    => isset($r['chambres']) ? (int)$r['chambres'] : null,
-        'chambres'    => isset($r['chambres']) ? (int)$r['chambres'] : null,
         'bathrooms'   => isset($r['salles_de_bain']) ? (int)$r['salles_de_bain'] : null,
-        'salles_de_bain' => isset($r['salles_de_bain']) ? (int)$r['salles_de_bain'] : null,
         'floor'       => isset($r['etage']) ? (int)$r['etage'] : null,
-        'etage'       => isset($r['etage']) ? (int)$r['etage'] : null,
         'floors'      => isset($r['etages']) ? (int)$r['etages'] : null,
-        'etages'      => isset($r['etages']) ? (int)$r['etages'] : null,
         'year'        => isset($r['annee']) ? (int)$r['annee'] : null,
-        'annee'       => isset($r['annee']) ? (int)$r['annee'] : null,
         'garage'      => !empty($r['garage']),
         'status'      => $r['statut'],
-        'statut'      => $r['statut'],
         'isFeatured'  => !empty($r['a_la_une']),
-        'a_la_une'    => !empty($r['a_la_une']),
         'isNew'       => !empty($r['nouveau']),
-        'nouveau'     => !empty($r['nouveau']),
         'images'      => $images,
         'features'    => $equip,
-        'equipements' => $equip,
         'location'    => [
             'wilaya'   => $r['wilaya'],
             'city'     => $r['commune'],
-            'commune'  => $r['commune'],
-            'district' => $r['quartier'],
-            'quartier' => $r['quartier'],
-            'address'  => $r['adresse'] ?? ''
+            'district' => $r['quartier'] ?? '',
+            'address'  => implode(', ', array_filter([$r['quartier'] ?? '', $r['commune'], $r['wilaya']]))
         ],
-        'wilaya'      => $r['wilaya'],
-        'commune'     => $r['commune'],
-        'quartier'    => $r['quartier'],
-        'description' => $r['description'],
-        'createdAt'   => $r['date_creation'],
-        'date_creation' => $r['date_creation']
-    ];
+        'createdAt'   => $r['date_creation']
+    ]);
 }
 
 try {
     switch ($method) {
         // --------------------------------------------------------------------
-        // 1. GET : Consultation d'un bien ou liste avec filtres
+        // 1. GET : Consultation des biens
         // --------------------------------------------------------------------
         case 'GET':
+            // Consultation d'un bien par son identifiant ID
             if (!empty($_GET['id'])) {
                 $id = (int)$_GET['id'];
                 $stmt = $conn->prepare("SELECT * FROM `properties` WHERE `id` = ?");
                 $stmt->bind_param("i", $id);
                 $stmt->execute();
-                $res = $stmt->get_result();
-                $row = $res->fetch_assoc();
+                $item = $stmt->get_result()->fetch_assoc();
 
-                if (!$row) {
+                if (!$item) {
                     http_response_code(404);
                     echo json_encode(['success' => false, 'error' => 'Bien introuvable']);
                     exit;
                 }
-                echo json_encode(format_property_row($row));
+                echo json_encode(format_property_row($item));
                 exit;
             }
 
+            // Consultation d'un bien par sa référence (ex: IML-001)
             if (!empty($_GET['reference'])) {
                 $ref = trim($_GET['reference']);
                 $stmt = $conn->prepare("SELECT * FROM `properties` WHERE `reference` = ?");
                 $stmt->bind_param("s", $ref);
                 $stmt->execute();
-                $res = $stmt->get_result();
-                $row = $res->fetch_assoc();
+                $item = $stmt->get_result()->fetch_assoc();
 
-                if (!$row) {
+                if (!$item) {
                     http_response_code(404);
                     echo json_encode(['success' => false, 'error' => 'Bien introuvable']);
                     exit;
                 }
-                echo json_encode(format_property_row($row));
+                echo json_encode(format_property_row($item));
                 exit;
             }
 
-            // Construction de la requête avec filtres optionnels
+            // Options pour les filtres (Wilayas, villes, types)
+            if (isset($_GET['options'])) {
+                $wRes = $conn->query("SELECT DISTINCT `wilaya` FROM `properties` WHERE `wilaya` IS NOT NULL AND `wilaya` != '' ORDER BY `wilaya` ASC");
+                $cRes = $conn->query("SELECT DISTINCT `commune` FROM `properties` WHERE `commune` IS NOT NULL AND `commune` != '' ORDER BY `commune` ASC");
+                $tRes = $conn->query("SELECT DISTINCT `type` FROM `properties` WHERE `type` IS NOT NULL AND `type` != '' ORDER BY `type` ASC");
+
+                $wilayas = [];
+                while ($w = $wRes->fetch_assoc()) { $wilayas[] = $w['wilaya']; }
+                $cities = [];
+                while ($c = $cRes->fetch_assoc()) { $cities[] = $c['commune']; }
+                $types = [];
+                while ($t = $tRes->fetch_assoc()) { $types[] = $t['type']; }
+
+                echo json_encode(['wilayas' => $wilayas, 'cities' => $cities, 'types' => $types]);
+                exit;
+            }
+
+            // Liste avec filtres optionnels
             $conditions = ["1=1"];
             $types = "";
             $params = [];
@@ -147,20 +147,7 @@ try {
                 $conditions[] = "`a_la_une` = 1";
             }
 
-            // Tri
-            $sort = trim($_GET['sort'] ?? '');
-            $orderBy = "`date_creation` DESC";
-            if ($sort === 'price-asc') {
-                $orderBy = "`prix` ASC";
-            } elseif ($sort === 'price-desc') {
-                $orderBy = "`prix` DESC";
-            } elseif ($sort === 'surface-asc') {
-                $orderBy = "`surface` ASC";
-            } elseif ($sort === 'surface-desc') {
-                $orderBy = "`surface` DESC";
-            }
-
-            $sql = "SELECT * FROM `properties` WHERE " . implode(' AND ', $conditions) . " ORDER BY " . $orderBy;
+            $sql = "SELECT * FROM `properties` WHERE " . implode(' AND ', $conditions) . " ORDER BY `date_creation` DESC";
             if (!empty($_GET['limit'])) {
                 $sql .= " LIMIT " . (int)$_GET['limit'];
             }
@@ -179,30 +166,10 @@ try {
             break;
 
         // --------------------------------------------------------------------
-        // 2. POST : Ajout, modification, statut ou suppression groupée
+        // 2. POST : Ajout d'un bien ou mise à jour
         // --------------------------------------------------------------------
         case 'POST':
             $action = $input['action'] ?? $_GET['action'] ?? '';
-
-            // Suppression multiple (batch delete)
-            if ($action === 'bulk_delete') {
-                $ids = $input['ids'] ?? [];
-                if (is_array($ids) && count($ids) > 0) {
-                    $stmtDel = $conn->prepare("DELETE FROM `properties` WHERE `id` = ?");
-                    foreach ($ids as $delId) {
-                        $intId = (int)$delId;
-                        if ($intId > 0) {
-                            $stmtDel->bind_param("i", $intId);
-                            $stmtDel->execute();
-                        }
-                    }
-                    echo json_encode(['success' => true, 'count' => count($ids), 'message' => 'Biens supprimés avec succès']);
-                    exit;
-                }
-                http_response_code(422);
-                echo json_encode(['success' => false, 'error' => 'Aucun ID fourni']);
-                exit;
-            }
 
             // Modification rapide de statut
             if ($action === 'status') {
@@ -242,8 +209,6 @@ try {
             $etages    = isset($input['etages']) ? (int)$input['etages'] : null;
             $annee     = isset($input['annee']) ? (int)$input['annee'] : null;
             $garage    = !empty($input['garage']) ? 1 : 0;
-            $statut    = trim((string)($input['statut'] ?? $input['status'] ?? 'Disponible'));
-
             // Gestion des alias d'objets (location, features, etc.)
             if (isset($input['location']) && is_array($input['location'])) {
                 if (empty($wilaya) && !empty($input['location']['wilaya'])) $wilaya = trim($input['location']['wilaya']);
@@ -253,11 +218,6 @@ try {
 
             $equipRaw = $input['equipements'] ?? $input['features'] ?? null;
             $equip = is_array($equipRaw) ? json_encode($equipRaw, JSON_UNESCAPED_UNICODE) : (string)($equipRaw ?? '[]');
-
-            $imagesRaw = $input['images'] ?? null;
-            $imgs = is_array($imagesRaw) ? json_encode($imagesRaw, JSON_UNESCAPED_UNICODE) : (string)($imagesRaw ?? '[]');
-
-            $desc = trim($input['description'] ?? '');
 
             $aLaUne  = (!empty($input['a_la_une']) || !empty($input['isFeatured'])) ? 1 : 0;
             $nouveau = (!empty($input['nouveau']) || !empty($input['isNew'])) ? 1 : 0;
@@ -291,8 +251,8 @@ try {
 
                 echo json_encode([
                     'success' => true,
-                    'message' => 'Bien mis à jour avec succès',
-                    'data'    => ['id' => $existingId]
+                    'id' => $existingId,
+                    'message' => 'Bien mis à jour avec succès'
                 ]);
                 exit;
             }
@@ -324,8 +284,9 @@ try {
             http_response_code(201);
             echo json_encode([
                 'success' => true,
+                'id' => $newId,
                 'message' => 'Bien créé avec succès',
-                'data'    => ['id' => $newId, 'reference' => $ref]
+                'reference' => $ref
             ]);
             break;
 
@@ -336,10 +297,9 @@ try {
             $id = (int)($_GET['id'] ?? $input['id'] ?? 0);
             if (!$id) {
                 http_response_code(422);
-                echo json_encode(['success' => false, 'error' => 'ID requis pour la suppression']);
+                echo json_encode(['success' => false, 'error' => 'ID manquant']);
                 exit;
             }
-
             $stmt = $conn->prepare("DELETE FROM `properties` WHERE `id` = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
@@ -349,7 +309,7 @@ try {
 
         default:
             http_response_code(405);
-            echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
+            echo json_encode(['success' => false, 'error' => 'Méthode HTTP non autorisée']);
             break;
     }
 } catch (Exception $e) {

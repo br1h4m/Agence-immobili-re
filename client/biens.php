@@ -141,6 +141,7 @@ $total_count = count($biens);
 // ----------------------------------------------------------------------------
 $wilayas_res = $conn->query("SELECT DISTINCT `wilaya` FROM `properties` WHERE `wilaya` IS NOT NULL AND `wilaya` != '' ORDER BY `wilaya` ASC");
 $types_res   = $conn->query("SELECT DISTINCT `type` FROM `properties` WHERE `type` IS NOT NULL AND `type` != '' ORDER BY `type` ASC");
+$communes_res= $conn->query("SELECT DISTINCT `commune` FROM `properties` WHERE `commune` IS NOT NULL AND `commune` != '' ORDER BY `commune` ASC");
 
 $available_wilayas = [];
 if ($wilayas_res) {
@@ -159,52 +160,12 @@ if (empty($available_types)) {
     $available_types = ['Appartement', 'Villa', 'Duplex', 'Bureau', 'Terrain'];
 }
 
-// Dictionnaire officiel des wilayas et communes d'Algérie
-$wilaya_communes_map = [
-    'Béjaïa' => ['Béjaïa', 'Tichy', 'Akbou', 'Amizour', 'Aokas', 'Souk El Ténine', 'Sidi Aïch', 'El Kseur', 'Oued Ghir', 'Kherrata'],
-    'Alger' => ['Hydra', 'El Biar', 'Ben Aknoun', 'Sidi Yahia', 'Bab Ezzouar', 'Dely Ibrahim', 'Zeralda', 'Staoueli', 'Chéraga', 'Kouba', 'Hussein Dey', 'Bordj El Kiffan', 'Ain Benian'],
-    'Oran' => ['Oran Centre', 'Canastel', 'Akid Lotfi', 'Bir El Djir', 'Maraval', 'Es Senia', 'Aïn El Turk', 'Arzew'],
-    'Blida' => ['Blida Centre', 'Boufarik', 'Ouled Yaïch', 'Chréa', 'Mouzaïa', 'Bougara'],
-    'Constantine' => ['Constantine Centre', 'Ali Mendjeli', 'El Khroub', 'Ain Smara', 'Hamma Bouziane'],
-    'Sétif' => ['Sétif Centre', 'El Eulma', 'Ain Arnat', 'Ain Oulmene', 'Bouandas'],
-    'Tipaza' => ['Tipaza Centre', 'Chenoua', 'Cherchell', 'Bousmail', 'Koléa', 'Fouka'],
-    'Tizi Ouzou' => ['Tizi Ouzou', 'Azazga', 'Tigzirt', 'Draa Ben Khedda', 'Boghni'],
-    'Annaba' => ['Annaba Centre', 'Seraïdi', 'El Bouni', 'El Hadjar', 'Berrahal']
-];
-
-// Enrichir avec la base de données
-$wc_res = $conn->query("SELECT DISTINCT `wilaya`, `commune` FROM `properties` WHERE `wilaya` IS NOT NULL AND `wilaya` != '' AND `commune` IS NOT NULL AND `commune` != ''");
-if ($wc_res) {
-    while ($row = $wc_res->fetch_assoc()) {
-        $w = $row['wilaya'];
-        $c = $row['commune'];
-        if (!isset($wilaya_communes_map[$w])) {
-            $wilaya_communes_map[$w] = [];
-        }
-        if (!in_array($c, $wilaya_communes_map[$w])) {
-            $wilaya_communes_map[$w][] = $c;
-        }
+$available_communes = [];
+if ($communes_res) {
+    while ($c = $communes_res->fetch_assoc()) {
+        $available_communes[] = $c['commune'];
     }
 }
-foreach (array_keys($wilaya_communes_map) as $w) {
-    if (!in_array($w, $available_wilayas)) {
-        $available_wilayas[] = $w;
-    }
-}
-sort($available_wilayas);
-
-// Communes actives selon la wilaya sélectionnée
-$active_communes = [];
-if (!empty($wilaya) && isset($wilaya_communes_map[$wilaya])) {
-    $active_communes = $wilaya_communes_map[$wilaya];
-} else {
-    $all_c = [];
-    foreach ($wilaya_communes_map as $cList) {
-        foreach ($cList as $c) { $all_c[$c] = true; }
-    }
-    $active_communes = array_keys($all_c);
-}
-sort($active_communes);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -340,7 +301,7 @@ sort($active_communes);
                 <legend>Localisation</legend>
                 <label class="filter-field">
                   <span>Wilaya</span>
-                  <select name="wilaya" id="filter-wilaya">
+                  <select name="wilaya">
                     <option value="">Toutes les wilayas</option>
                     <?php foreach ($available_wilayas as $w): ?>
                       <option value="<?= e($w) ?>" <?= $wilaya === $w ? 'selected' : '' ?>><?= e($w) ?></option>
@@ -350,9 +311,9 @@ sort($active_communes);
 
                 <label class="filter-field" style="margin-top:8px">
                   <span>Ville / Commune</span>
-                  <select name="city" id="filter-city">
+                  <select name="city">
                     <option value="">Toutes les villes</option>
-                    <?php foreach ($active_communes as $c): ?>
+                    <?php foreach ($available_communes as $c): ?>
                       <option value="<?= e($c) ?>" <?= $city === $c ? 'selected' : '' ?>><?= e($c) ?></option>
                     <?php endforeach; ?>
                   </select>
@@ -474,36 +435,6 @@ sort($active_communes);
       }
       if (closeBtn && aside) {
         closeBtn.addEventListener('click', function() { aside.classList.remove('is-open'); });
-      }
-
-      // Liaison dynamique Wilaya -> Communes (Point 9)
-      var wilayaMap = <?= json_encode($wilaya_communes_map) ?>;
-      var wilayaSelect = document.getElementById('filter-wilaya');
-      var citySelect = document.getElementById('filter-city');
-
-      if (wilayaSelect && citySelect) {
-        wilayaSelect.addEventListener('change', function() {
-          var selectedW = this.value;
-          var currentVal = citySelect.value;
-          citySelect.innerHTML = '<option value="">Toutes les villes</option>';
-          var list = [];
-          if (selectedW && wilayaMap[selectedW]) {
-            list = wilayaMap[selectedW];
-          } else {
-            var set = {};
-            for (var k in wilayaMap) {
-              wilayaMap[k].forEach(function(c) { set[c] = true; });
-            }
-            list = Object.keys(set).sort();
-          }
-          list.forEach(function(c) {
-            var opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            if (c === currentVal) opt.selected = true;
-            citySelect.appendChild(opt);
-          });
-        });
       }
     })();
   </script>

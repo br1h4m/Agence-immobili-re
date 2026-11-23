@@ -126,8 +126,6 @@ if ($property) {
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/component.css">
   <link rel="stylesheet" href="/assets/css/responsive.css">
-  <!-- Carte interactive Leaflet OpenStreetMap (sans clé API) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 
@@ -261,7 +259,9 @@ if ($property) {
             <section style="margin-top: 40px;">
               <h2 class="section-title" style="font-size:1.35rem">Localisation</h2>
               <p class="text-muted" style="margin-bottom:16px"><?= e($full_location) ?></p>
-              <div id="property-map" style="background:var(--color-surface);border:1px solid var(--color-border-soft);border-radius:var(--radius-md);height:320px;width:100%;position:relative;z-index:1;"></div>
+              <div class="map-placeholder" style="background:var(--color-surface);border:1px solid var(--color-border-soft);border-radius:var(--radius-md);height:260px;display:flex;align-items:center;justify-content:center;color:var(--color-muted);">
+                Secteur : <?= e($property['commune'] . ' (' . $property['wilaya'] . ')') ?>
+              </div>
             </section>
 
             <!-- Biens similaires recommandés -->
@@ -459,74 +459,7 @@ if ($property) {
           });
         });
       }
-      // 4. Initialisation de la carte interactive Leaflet OpenStreetMap
-      var mapEl = document.getElementById('property-map');
-      if (mapEl && typeof L !== 'undefined') {
-        var wilaya = <?= json_encode($property['wilaya'] ?? '') ?>;
-        var commune = <?= json_encode($property['commune'] ?? '') ?>;
-        var title = <?= json_encode($titre ?? '') ?>;
-        var coordsMap = {
-          'Béjaïa': [36.751, 5.056],
-          'Alger': [36.7538, 3.0588],
-          'Oran': [35.6987, -0.6349],
-          'Blida': [36.47, 2.83],
-          'Constantine': [36.365, 6.6147],
-          'Sétif': [36.19, 5.41],
-          'Tipaza': [36.5897, 2.4475],
-          'Tizi Ouzou': [36.7169, 4.0497],
-          'Annaba': [36.9, 7.7667],
-          'Tlemcen': [34.878, -1.315],
-          'Batna': [35.556, 6.174],
-          'Mostaganem': [35.93, 0.089],
-          'Boumerdès': [36.76, 3.47],
-          'Jijel': [36.82, 5.76]
-        };
-        var center = coordsMap[wilaya] || [36.751, 5.056];
-        var map = L.map('property-map', { scrollWheelZoom: false }).setView(center, 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
-        var marker = L.marker(center).addTo(map);
-        marker.bindPopup('<strong>' + title + '</strong><br>' + commune + ' (' + wilaya + ')').openPopup();
-      }
     })();
-  </script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    // Déclenche l'affichage après chargement de Leaflet si asynchrone
-    window.addEventListener('load', function() {
-      var mapEl = document.getElementById('property-map');
-      if (mapEl && window.L && !mapEl._leaflet_id) {
-        var wilaya = <?= json_encode($property['wilaya'] ?? '') ?>;
-        var commune = <?= json_encode($property['commune'] ?? '') ?>;
-        var title = <?= json_encode($titre ?? '') ?>;
-        var coordsMap = {
-          'Béjaïa': [36.751, 5.056],
-          'Alger': [36.7538, 3.0588],
-          'Oran': [35.6987, -0.6349],
-          'Blida': [36.47, 2.83],
-          'Constantine': [36.365, 6.6147],
-          'Sétif': [36.19, 5.41],
-          'Tipaza': [36.5897, 2.4475],
-          'Tizi Ouzou': [36.7169, 4.0497],
-          'Annaba': [36.9, 7.7667],
-          'Tlemcen': [34.878, -1.315],
-          'Batna': [35.556, 6.174],
-          'Mostaganem': [35.93, 0.089],
-          'Boumerdès': [36.76, 3.47],
-          'Jijel': [36.82, 5.76]
-        };
-        var center = coordsMap[wilaya] || [36.751, 5.056];
-        var map = L.map('property-map', { scrollWheelZoom: false }).setView(center, 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
-        var marker = L.marker(center).addTo(map);
-        marker.bindPopup('<strong>' + title + '</strong><br>' + commune + ' (' + wilaya + ')').openPopup();
-      }
-    });
   </script>
 </body>
 </html>

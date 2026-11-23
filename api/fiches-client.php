@@ -28,12 +28,9 @@ function format_fiche_row(array $r): array {
     return array_merge($r, [
         'id'        => (int)$r['id'],
         'phone'     => $r['telephone'],
-        'telephone' => $r['telephone'],
         'typeBien'  => $r['type_bien'],
         'idBien'    => $r['id_bien'],
         'status'    => $r['statut'],
-        'statut'    => $r['statut'],
-        'is_read'   => (int)($r['is_read'] ?? 0),
         'createdAt' => $r['date_creation']
     ]);
 }
@@ -86,74 +83,10 @@ try {
             break;
 
         // --------------------------------------------------------------------
-        // 2. POST : Enregistrement, statut ou actions de lot
+        // 2. POST : Enregistrement d'une nouvelle fiche client
         // --------------------------------------------------------------------
         case 'POST':
             $action = $input['action'] ?? $_GET['action'] ?? '';
-
-            // Marquer comme lu
-            if ($action === 'mark_read') {
-                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-                if ($id > 0) {
-                    $stmt = $conn->prepare("UPDATE `fiches_client` SET `is_read` = 1 WHERE `id` = ?");
-                    $stmt->bind_param("i", $id);
-                    $stmt->execute();
-                }
-                echo json_encode(['success' => true, 'message' => 'Fiche client marquée comme lue']);
-                exit;
-            }
-
-            // Marquer comme non lu
-            if ($action === 'mark_unread') {
-                $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-                if ($id > 0) {
-                    $stmt = $conn->prepare("UPDATE `fiches_client` SET `is_read` = 0 WHERE `id` = ?");
-                    $stmt->bind_param("i", $id);
-                    $stmt->execute();
-                }
-                echo json_encode(['success' => true, 'message' => 'Fiche client marquée comme non lue']);
-                exit;
-            }
-
-            // Suppression multiple (batch delete)
-            if ($action === 'bulk_delete') {
-                $ids = $input['ids'] ?? [];
-                if (is_array($ids) && count($ids) > 0) {
-                    $stmtDel = $conn->prepare("DELETE FROM `fiches_client` WHERE `id` = ?");
-                    foreach ($ids as $delId) {
-                        $intId = (int)$delId;
-                        if ($intId > 0) {
-                            $stmtDel->bind_param("i", $intId);
-                            $stmtDel->execute();
-                        }
-                    }
-                    echo json_encode(['success' => true, 'count' => count($ids), 'message' => 'Fiches client supprimées']);
-                    exit;
-                }
-                http_response_code(422);
-                echo json_encode(['success' => false, 'error' => 'Aucun ID fourni']);
-                exit;
-            }
-
-            // Marquer multiple comme lu
-            if ($action === 'bulk_mark_read') {
-                $ids = $input['ids'] ?? [];
-                if (is_array($ids) && count($ids) > 0) {
-                    $stmtRead = $conn->prepare("UPDATE `fiches_client` SET `is_read` = 1 WHERE `id` = ?");
-                    foreach ($ids as $rId) {
-                        $intId = (int)$rId;
-                        if ($intId > 0) {
-                            $stmtRead->bind_param("i", $intId);
-                            $stmtRead->execute();
-                        }
-                    }
-                    echo json_encode(['success' => true, 'count' => count($ids), 'message' => 'Fiches client marquées comme lues']);
-                    exit;
-                }
-                http_response_code(422);
-                echo json_encode(['success' => false, 'error' => 'Aucun ID fourni']);
-                exit;
-            }
 
             // Modification rapide de statut
             if ($action === 'status') {
@@ -192,10 +125,10 @@ try {
             $stmt = $conn->prepare("
                 INSERT INTO `fiches_client` (
                     `reference`, `nom`, `prenom`, `telephone`, `email`,
-                    `transaction`, `type_bien`, `id_bien`, `piece_identite`, `signature`, `statut`, `is_read`
+                    `transaction`, `type_bien`, `id_bien`, `piece_identite`, `signature`, `statut`
                 ) VALUES (
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, 'Nouveau', 0
+                    ?, ?, ?, ?, ?, 'Nouveau'
                 )
             ");
             $stmt->bind_param(

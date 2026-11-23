@@ -11,19 +11,6 @@ require_once __DIR__ . '/../backend/db.php';
 
 $activePage = 'a-propos';
 
-// Récupération des paramètres CMS dynamiques
-$settings = [];
-$res_p = $conn->query("SELECT `cle`, `valeur` FROM `parametres`");
-if ($res_p) {
-    while ($row = $res_p->fetch_assoc()) {
-        $settings[$row['cle']] = $row['valeur'];
-    }
-}
-
-$about_title = !empty($settings['about_title']) ? $settings['about_title'] : 'Une agence fondée sur le terrain';
-$about_text = !empty($settings['about_text']) ? $settings['about_text'] : 'Imolode est née de la conviction qu\'une transaction immobilière réussie repose avant tout sur la confiance mutuelle. Depuis nos débuts, nous avons construit une méthode claire et sans détour : visiter chaque bien, écouter attentivement chaque projet de vie, et ne proposer que ce qui correspond réellement aux attentes.';
-$about_image = !empty($settings['about_image']) ? $settings['about_image'] : 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=75';
-
 $values = [
     [
         'title' => 'Rigueur & Conformité',
@@ -67,25 +54,6 @@ $team = [
         'bio' => 'Dédiée aux relations locataires-propriétaires, états des lieux et gestion locative.'
     ]
 ];
-
-// Récupération dynamique des membres actifs de l'agence depuis MySQL
-$users_res = $conn->query("SELECT `nom`, `email`, `role`, `avatar` FROM `utilisateurs` WHERE `statut` = 'Actif' ORDER BY (`role` = 'Administrateur') DESC, `id` ASC");
-if ($users_res && $users_res->num_rows > 0) {
-    $db_team = [];
-    while ($u = $users_res->fetch_assoc()) {
-        $avatar = !empty($u['avatar']) ? $u['avatar'] : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=75';
-        $role_label = ($u['role'] === 'Administrateur') ? 'Gérant & Conseiller Principal' : 'Conseiller Immobilier';
-        $db_team[] = [
-            'name' => $u['nom'],
-            'role' => $role_label,
-            'image' => $avatar,
-            'bio' => 'Spécialiste de la valorisation et du suivi personnalisé de vos projets immobiliers.'
-        ];
-    }
-    if (!empty($db_team)) {
-        $team = $db_team;
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -126,14 +94,17 @@ if ($users_res && $users_res->num_rows > 0) {
       <div class="container">
         <div class="split">
           <div class="split-media">
-            <img src="<?= e($about_image) ?>" alt="Agence Immolode" loading="lazy">
+            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=75" alt="Agence Immolode" loading="lazy">
           </div>
           <div class="split-body">
             <span class="section-eyebrow">Notre histoire</span>
-            <h2 class="section-title" style="margin-top:8px"><?= e($about_title) ?></h2>
-            <div class="text-muted" style="line-height:1.7;">
-              <?= nl2br(e($about_text)) ?>
-            </div>
+            <h2 class="section-title" style="margin-top:8px">Une agence fondée sur le terrain</h2>
+            <p class="text-muted">
+              Imolode est née de la conviction qu'une transaction immobilière réussie repose avant tout sur la confiance mutuelle. Depuis nos débuts, nous avons construit une méthode claire et sans détour : visiter chaque bien, écouter attentivement chaque projet de vie, et ne proposer que ce qui correspond réellement aux attentes.
+            </p>
+            <p class="text-muted">
+              Cette exigence nous a permis d'accompagner des centaines de familles et d'investisseurs, sur des projets résidentiels comme professionnels, avec un taux de satisfaction exceptionnel.
+            </p>
           </div>
         </div>
       </div>

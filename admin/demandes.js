@@ -16,7 +16,6 @@ let currentFilters = {
 };
 
 let activeDemandeId = null;
-let selectedDemandeIds = new Set();
 
 async function init() {
   const ready = await initAdminLayout({
@@ -72,102 +71,13 @@ async function init() {
       </div>
     </div>
 
-    <!-- Barre d'actions groupées -->
-    <div id="demandes-bulk-bar" class="bulk-actions-bar" style="display: none;">
-      <div class="bulk-actions-info">
-        <span id="demandes-selected-count">0 sélectionnée(s)</span>
-      </div>
-      <div class="bulk-actions-btns">
-        <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-dem-bulk">Annuler</button>
-        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-read-dem">
-          ${adminIcon('check', { size: 14 })} Marquer comme lues
-        </button>
-        <button type="button" class="btn btn-danger btn-sm" id="btn-delete-selected-dem">
-          ${adminIcon('trash', { size: 14 })} Supprimer la sélection
-        </button>
-      </div>
-    </div>
-
     <!-- Conteneur des résultats -->
     <div id="demandes-results"></div>
   `;
 
-  // Actions groupées
-  document.getElementById('btn-cancel-dem-bulk')?.addEventListener('click', () => {
-    selectedDemandeIds.clear();
-    updateBulkBar();
-    renderResults();
-  });
-
-  document.getElementById('btn-bulk-read-dem')?.addEventListener('click', async () => {
-    if (selectedDemandeIds.size === 0) return;
-    try {
-      await fetch('/api/demandes.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bulk_mark_read', ids: Array.from(selectedDemandeIds) })
-      });
-      showToast(`${selectedDemandeIds.size} demande(s) marquée(s) comme lues`);
-    } catch (_) {}
-    selectedDemandeIds.clear();
-    updateBulkBar();
-    renderResults();
-  });
-
-  document.getElementById('btn-delete-selected-dem')?.addEventListener('click', async () => {
-    if (selectedDemandeIds.size === 0) return;
-    const ok = await confirmModal({
-      title: 'Suppression groupée',
-      message: `Êtes-vous sûr de vouloir supprimer définitivement ces ${selectedDemandeIds.size} demande(s) ?`,
-      confirmText: 'Supprimer'
-    });
-
-    if (ok) {
-      try {
-        await fetch('/api/demandes.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'bulk_delete', ids: Array.from(selectedDemandeIds) })
-        });
-        showToast('Demandes supprimées');
-      } catch (_) {
-        selectedDemandeIds.forEach(id => deleteDemande(id));
-      }
-      selectedDemandeIds.clear();
-      updateBulkBar();
-      renderResults();
-    }
-  });
-
   bindFilterEvents();
   setupDrawerListeners();
   renderResults();
-
-  // Redirection ciblée avec scroll et ouverture automatique du tiroir (Point 14)
-  const targetId = new URLSearchParams(window.location.search).get('id');
-  if (targetId) {
-    setTimeout(() => {
-      const row = document.querySelector(`tr[data-id="${targetId}"]`);
-      if (row) {
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        row.classList.add('row-highlight');
-      }
-      openDemandeDrawer(targetId);
-    }, 250);
-  }
-}
-
-function updateBulkBar() {
-  const bar = document.getElementById('demandes-bulk-bar');
-  const countEl = document.getElementById('demandes-selected-count');
-  if (!bar) return;
-
-  if (selectedDemandeIds.size > 0) {
-    bar.style.display = 'flex';
-    if (countEl) countEl.textContent = `${selectedDemandeIds.size} demande(s) sélectionnée(s)`;
-  } else {
-    bar.style.display = 'none';
-  }
 }
 
 function bindFilterEvents() {
@@ -208,9 +118,9 @@ function renderResults() {
   const container = document.getElementById('demandes-results');
   if (!container) return;
 
-  const demandes = getDemandes(currentFilters);
+  const list = getDemandes(currentFilters);
 
-  if (demandes.length === 0) {
+  if (list.length === 0) {
     container.innerHTML = `
       <div class="card">
         <div class="empty-state">
@@ -219,30 +129,24 @@ function renderResults() {
           </div>
           <h3 class="empty-state-title">Aucune demande trouvée</h3>
           <p class="empty-state-text">
-            Aucun contact ou dossier ne correspond à vos critères de recherche actuels.
+            Aucun message ne correspond à vos critères de recherche actuels.
           </p>
-          <button type="button" class="btn btn-outline" id="btn-empty-reset">
-            Réinitialiser les filtres
-          </button>
         </div>
       </div>
     `;
-    document.getElementById('btn-empty-reset')?.addEventListener('click', () => {
-      currentFilters = { search: '', type: '', status: '' };
-      renderResults();
-    });
     return;
   }
 
-  const rowsHtml = demandes.map((item) => {
-    let typeBadge = '';
-    const isFicheClient = item.type === 'Fiche client' || Boolean(item.signature);
+  const rows = list.map((item) => {
     const isEstimation = item.type === 'Estimation';
+    const isFicheClient = item.type === 'Fiche client';
 
+    let typeBadge = '';
     if (isFicheClient) {
-      typeBadge = `<span class="badge badge--gold">${adminIcon('file-text', { size: 12 })} Dossier client</span>`;
+      const isOffre = item.transaction === 'Offre';
+      typeBadge = `<span class="badge ${isOffre ? 'badge--sale' : 'badge--info'}">${adminIcon('file-text', { size: 12 })} Dossier client (${escapeHTML(item.transaction || 'Demande')})</span>`;
     } else if (isEstimation) {
-      typeBadge = `<span class="badge badge--warning">${adminIcon('building', { size: 12 })} Estimation</span>`;
+      typeBadge = `<span class="badge badge--sale">${adminIcon('building', { size: 12 })} Estimation</span>`;
     } else {
       typeBadge = `<span class="badge badge--info">${adminIcon('mail', { size: 12 })} Contact</span>`;
     }
@@ -251,31 +155,20 @@ function renderResults() {
     const hasSig = Boolean(item.signature);
     const docTags = [];
     if (hasDoc) {
-      docTags.push(`<span class="doc-badge" title="Pièce d'identité">${adminIcon('file-text', { size: 11 })} CNI</span>`);
+      docTags.push(`<span class="doc-badge" title="Pièce d'identité : ${escapeHTML(item.pieceIdentite.name)}">${adminIcon('file-text', { size: 11 })} CNI / Justificatif</span>`);
     }
     if (hasSig) {
       docTags.push(`<span class="badge badge--success" style="font-size: 0.7rem; padding: 2px 6px;">${adminIcon('check', { size: 10 })} Signé</span>`);
     }
 
-    const isUnread = item.is_read === 0 || item.is_read === false;
-    const isChecked = selectedDemandeIds.has(String(item.id));
-
     return `
-      <tr data-id="${item.id}" style="${isUnread ? 'font-weight: 600; background-color: rgba(181, 154, 106, 0.04);' : ''}">
-        <td style="width: 40px;">
-          <input type="checkbox" class="admin-checkbox row-dem-checkbox" data-id="${item.id}" ${isChecked ? 'checked' : ''}>
-        </td>
+      <tr data-id="${item.id}" title="Cliquez pour consulter le dossier complet">
         <td>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            ${isUnread ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--admin-gold); flex-shrink:0;" title="Demande non lue"></span>` : ''}
-            <div>
-              <div style="font-size: 0.85rem; color: var(--admin-text);">
-                ${formatDate(item.createdAt)}
-              </div>
-              <div style="font-size: 0.75rem; color: var(--admin-text-subtle);">
-                ${item.reference ? `<span style="font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(item.reference)}</span>` : (item.createdAt ? new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '')}
-              </div>
-            </div>
+          <div style="font-weight: 600; color: var(--admin-text); font-size: 0.85rem;">
+            ${formatDate(item.createdAt)}
+          </div>
+          <div style="font-size: 0.75rem; color: var(--admin-text-subtle);">
+            ${item.reference ? `<span style="font-family: monospace; color: var(--admin-gold); font-weight: 600;">${escapeHTML(item.reference)}</span>` : (item.createdAt ? new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '')}
           </div>
         </td>
         <td>
@@ -290,8 +183,11 @@ function renderResults() {
           </div>
         </td>
         <td>
-          <div style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.88rem;">
+          <div style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">
             ${escapeHTML(item.subject || item.message || '—')}
+          </div>
+          <div style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.78rem; color: var(--admin-text-subtle);">
+            ${escapeHTML(item.message || '')}
           </div>
         </td>
         <td>
@@ -299,20 +195,17 @@ function renderResults() {
             <option value="Nouveau" ${item.status === 'Nouveau' ? 'selected' : ''}>Nouveau</option>
             <option value="En cours" ${item.status === 'En cours' ? 'selected' : ''}>En cours</option>
             <option value="Validé" ${item.status === 'Validé' ? 'selected' : ''}>Validé</option>
-            <option value="Traite" ${item.status === 'Traite' || item.status === 'Traité' ? 'selected' : ''}>Traité</option>
+            <option value="Traite" ${item.status === 'Traite' ? 'selected' : ''}>Traité</option>
             <option value="Rejeté" ${item.status === 'Rejeté' ? 'selected' : ''}>Rejeté</option>
           </select>
         </td>
-        <td style="text-align: right;">
-          <div class="table-actions" style="justify-content: flex-end;">
-            <button type="button" class="btn-icon btn-toggle-read" data-id="${item.id}" title="${isUnread ? 'Marquer comme lu' : 'Marquer comme non lu'}">
-              ${adminIcon(isUnread ? 'check' : 'mail', { size: 15 })}
-            </button>
-            <button type="button" class="btn-icon btn-view-demande" data-id="${item.id}" title="Consulter la demande" aria-label="Voir les détails">
-              ${adminIcon('eye', { size: 15 })}
+        <td>
+          <div class="table-actions">
+            <button type="button" class="btn-icon btn-view-demande" data-id="${item.id}" title="Consulter la demande en détail" aria-label="Voir les détails">
+              ${adminIcon('eye', { size: 16 })}
             </button>
             <button type="button" class="btn-icon btn-icon--danger btn-delete-demande" data-id="${item.id}" title="Supprimer la demande" aria-label="Supprimer">
-              ${adminIcon('trash', { size: 15 })}
+              ${adminIcon('trash', { size: 16 })}
             </button>
           </div>
         </td>
@@ -323,108 +216,72 @@ function renderResults() {
   container.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <h2 class="card-title">Demandes reçues (${demandes.length})</h2>
+        <h2 class="card-title">Demandes & Dossiers enregistrés (${list.length})</h2>
       </div>
       <div class="table-responsive">
         <table class="admin-table">
           <thead>
             <tr>
-              <th style="width: 40px;">
-                <input type="checkbox" id="demandes-select-all" class="admin-checkbox" title="Tout sélectionner">
-              </th>
               <th>Date & Réf</th>
-              <th>Type</th>
-              <th>Contact / Prospect</th>
-              <th>Sujet ou Message</th>
+              <th>Type de demande</th>
+              <th>Client</th>
+              <th>Sujet & Message</th>
               <th>Statut</th>
-              <th style="text-align: right; width: 130px;">Actions</th>
+              <th style="width: 100px;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml}
+            ${rows}
           </tbody>
         </table>
       </div>
     </div>
   `;
 
-  // Checkboxes
-  const selectAll = document.getElementById('demandes-select-all');
-  selectAll?.addEventListener('change', (e) => {
-    const checked = e.target.checked;
-    container.querySelectorAll('.row-dem-checkbox').forEach((cb) => {
-      cb.checked = checked;
-      const id = cb.dataset.id;
-      if (checked) selectedDemandeIds.add(String(id));
-      else selectedDemandeIds.delete(String(id));
-    });
-    updateBulkBar();
-  });
+  bindTableEvents(container);
+}
 
-  container.querySelectorAll('.row-dem-checkbox').forEach((cb) => {
-    cb.addEventListener('change', () => {
-      const id = cb.dataset.id;
-      if (cb.checked) selectedDemandeIds.add(String(id));
-      else selectedDemandeIds.delete(String(id));
-      updateBulkBar();
-    });
-  });
-
-  // Marquer comme lu / non lu individuellement (Point 13)
-  container.querySelectorAll('.btn-toggle-read').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.id;
-      const dem = demandes.find((d) => String(d.id) === String(id));
-      const nextRead = (dem?.is_read === 1) ? 0 : 1;
-      const action = nextRead ? 'mark_read' : 'mark_unread';
-
-      try {
-        await fetch('/api/demandes.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, id: parseInt(id, 10) })
-        });
-        if (dem) dem.is_read = nextRead;
-        showToast(nextRead ? 'Demande marquée comme lue' : 'Demande marquée comme non lue');
-        renderResults();
-      } catch (_) {}
+function bindTableEvents(container) {
+  // Ligne de tableau cliquable
+  container.querySelectorAll('tbody tr').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a')) {
+        return;
+      }
+      openDrawer(tr.dataset.id);
     });
   });
 
   // Changement rapide de statut
   container.querySelectorAll('.select-status-quick').forEach((sel) => {
     sel.addEventListener('change', (e) => {
-      const id = sel.dataset.id;
-      const newStatus = sel.value;
-      updateDemandeStatus(id, newStatus);
-      showToast(`Statut mis à jour : ${newStatus}`);
-      renderResults();
+      const id = e.target.dataset.id;
+      const newStatus = e.target.value;
+      if (updateDemandeStatus(id, newStatus)) {
+        showToast(`Statut mis à jour : ${newStatus}`);
+      }
     });
   });
 
-  // Boutons Voir / Consulter
+  // Bouton voir
   container.querySelectorAll('.btn-view-demande').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      openDemandeDrawer(id);
+      openDrawer(btn.dataset.id);
     });
   });
 
-  // Boutons Supprimer
+  // Bouton supprimer
   container.querySelectorAll('.btn-delete-demande').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
       const ok = await confirmModal({
-        title: 'Supprimer la demande ?',
-        message: 'Cette action est irréversible.',
+        title: 'Supprimer la demande',
+        message: 'Êtes-vous sûr de vouloir supprimer définitivement cette demande ? Cette action est irréversible.',
         confirmText: 'Supprimer'
       });
       if (ok) {
         deleteDemande(id);
-        selectedDemandeIds.delete(String(id));
-        updateBulkBar();
-        showToast('Demande supprimée');
+        showToast('Demande supprimée avec succès');
         renderResults();
       }
     });
@@ -436,33 +293,135 @@ function setupDrawerListeners() {
   backdrop?.addEventListener('click', closeDrawer);
 }
 
-function openDemandeDrawer(id) {
+function openDrawer(id) {
+  const demande = getDemandeById(id);
+  if (!demande) return;
+
   activeDemandeId = id;
   const drawer = document.getElementById('demande-drawer');
   const backdrop = document.getElementById('drawer-backdrop');
   if (!drawer) return;
 
-  const demande = getDemandeById(id);
-  if (!demande) return;
+  const isEstimation = demande.type === 'Estimation';
+  const isFicheClient = demande.type === 'Fiche client' || demande.isFicheClient;
+  const d = demande.details || {};
+  const doc = demande.pieceIdentite || {};
+  const isImageDoc = doc.dataUrl && !doc.name?.toLowerCase().endsWith('.pdf');
 
-  // Auto-marquer comme lu à la consultation (Point 13)
-  if (!demande.is_read) {
-    demande.is_read = 1;
-    fetch('/api/demandes.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'mark_read', id: parseInt(id, 10) })
-    }).catch(() => {});
+  let detailsBlock = '';
+  if (isEstimation) {
+    detailsBlock = `
+      <div style="margin-bottom: 24px; padding: 18px; background-color: var(--admin-surface-alt); border: 1px solid var(--admin-border); border-radius: var(--radius-sm);">
+        <h4 style="margin: 0 0 14px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('building', { size: 16 })} Détails du bien à estimer
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 0.86rem;">
+          <div><span style="color: var(--admin-text-muted);">Type de bien :</span> <strong>${escapeHTML(d.type || 'Non spécifié')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Wilaya :</span> <strong>${escapeHTML(d.wilaya || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Commune :</span> <strong>${escapeHTML(d.commune || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Quartier :</span> <strong>${escapeHTML(d.quartier || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Surface habitable :</span> <strong>${d.surface ? escapeHTML(d.surface) + ' m²' : '—'}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Surface terrain :</span> <strong>${d.land ? escapeHTML(d.land) + ' m²' : '—'}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Chambres :</span> <strong>${escapeHTML(d.bedrooms || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Salles de bain :</span> <strong>${escapeHTML(d.bathrooms || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Garage / Parking :</span> <strong>${escapeHTML(d.garage || '—')}</strong></div>
+        </div>
+      </div>
+    `;
   }
 
-  const isFicheClient = demande.type === 'Fiche client' || Boolean(demande.signature);
-  const isEstimation = demande.type === 'Estimation';
+  let ficheClientBlock = '';
+  if (isFicheClient) {
+    ficheClientBlock = `
+      <!-- Nature de l'opération -->
+      <div style="margin-bottom: 24px; padding: 18px; background-color: var(--admin-surface-alt); border: 1px solid var(--admin-border); border-radius: var(--radius-sm);">
+        <h4 style="margin: 0 0 14px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('building', { size: 16 })} Détails de la constitution de dossier
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 0.88rem;">
+          <div><span style="color: var(--admin-text-muted);">Opération :</span> <strong>${escapeHTML(demande.transaction || 'Demande')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Type de bien :</span> <strong>${escapeHTML(demande.typeBien || 'Appartement')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Référence :</span> <strong>${escapeHTML(demande.reference || '—')}</strong></div>
+          <div><span style="color: var(--admin-text-muted);">Date :</span> <strong>${formatDate(demande.createdAt)}</strong></div>
+        </div>
+      </div>
+
+      <!-- Pièce d'identité avec fonction inspection / zoom -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('file-text', { size: 16 })} Justificatif d'identité (CNI, Permis, Passeport)
+        </h4>
+
+        ${doc.name ? `
+          <div class="doc-inspect-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                ${adminIcon('file-text', { size: 22, className: 'text-gold' })}
+                <div>
+                  <p style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--admin-text);">${escapeHTML(doc.name)}</p>
+                  <p style="margin: 2px 0 0; font-size: 0.78rem; color: var(--admin-text-muted);">
+                    ${doc.size ? `${(doc.size / 1024).toFixed(1)} Ko` : 'Document vérifié'}
+                  </p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                ${isImageDoc ? `
+                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}">
+                    ${adminIcon('eye', { size: 14 })} Inspecter en grand
+                  </button>
+                ` : (doc.dataUrl ? `
+                  <a href="${escapeHTML(doc.dataUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+                    ${adminIcon('download', { size: 14 })} Télécharger le PDF
+                  </a>
+                ` : `
+                  <span class="badge badge--success">${adminIcon('check', { size: 12 })} Certifié</span>
+                `)}
+              </div>
+            </div>
+
+            ${isImageDoc ? `
+              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}" title="Cliquez pour zoomer en plein écran">
+                <img src="${escapeHTML(doc.dataUrl)}" alt="Pièce d'identité" class="doc-inspect-img">
+                <div class="doc-inspect-overlay">
+                  ${adminIcon('search', { size: 18 })}
+                  <span>Cliquer pour inspecter en plein écran</span>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        ` : `
+          <p style="font-size: 0.88rem; color: var(--admin-text-muted);">Aucune pièce d'identité jointe.</p>
+        `}
+      </div>
+
+      <!-- Signature électronique -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text); display: flex; align-items: center; gap: 8px;">
+          ${adminIcon('check', { size: 16 })} Engagement officiel & Signature électronique
+        </h4>
+        <div style="padding: 12px 14px; background-color: rgba(181, 154, 106, 0.08); border-left: 3px solid var(--admin-gold); border-radius: var(--radius-xs); font-size: 0.84rem; line-height: 1.5; color: var(--admin-text); margin-bottom: 10px;">
+          « Ceci constitue un engagement officiel. En cas de transaction, le client est tenu d'honorer les frais de l'agence conformément aux dispositions réglementaires en vigueur. »
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid var(--admin-border); border-radius: var(--radius-sm); padding: 16px; text-align: center;">
+          ${demande.signature ? `
+            <img src="${escapeHTML(demande.signature)}" alt="Signature électronique du client" style="max-height: 110px; max-width: 100%; display: inline-block; object-fit: contain;">
+            <p style="margin: 8px 0 0; font-size: 0.75rem; color: var(--admin-text-muted);">
+              Signature électronique manuscrite certifiée — Recueillie le ${formatDateTime(demande.createdAt)}
+            </p>
+          ` : `
+            <p style="margin: 0; font-size: 0.85rem; color: var(--admin-text-muted);">Signature non enregistrée.</p>
+          `}
+        </div>
+      </div>
+    `;
+  }
 
   drawer.innerHTML = `
     <div class="drawer-header">
       <div>
-        <h3 class="drawer-title">Détails de la demande</h3>
-        <p class="drawer-subtitle" style="margin: 4px 0 0; color: var(--admin-text-muted); font-size: 0.85rem;">
+        <h3 class="drawer-title">${escapeHTML(demande.subject || 'Demande')}</h3>
+        <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--admin-text-muted);">
           Reçue le ${formatDateTime(demande.createdAt)}
         </p>
       </div>
@@ -472,32 +431,23 @@ function openDemandeDrawer(id) {
     </div>
 
     <div class="drawer-body">
-      <!-- Fiche récapitulative prospect -->
-      <div class="detail-block" style="background: var(--admin-surface-alt); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--admin-border); margin-bottom: 20px;">
-        <h4 style="margin: 0 0 12px; font-size: 1rem; color: var(--admin-text);">Coordonnées du prospect</h4>
-        <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.9rem;">
-          <div>
-            <span style="color: var(--admin-text-subtle); display: block; font-size: 0.78rem;">Nom complet</span>
-            <strong>${escapeHTML(demande.nom || '—')}</strong>
-          </div>
-          <div>
-            <span style="color: var(--admin-text-subtle); display: block; font-size: 0.78rem;">Téléphone</span>
-            <strong>${demande.phone ? `<a href="tel:${escapeHTML(demande.phone)}">${escapeHTML(demande.phone)}</a>` : '—'}</strong>
-          </div>
-          <div>
-            <span style="color: var(--admin-text-subtle); display: block; font-size: 0.78rem;">Adresse e-mail</span>
-            <strong>${demande.email ? `<a href="mailto:${escapeHTML(demande.email)}">${escapeHTML(demande.email)}</a>` : '—'}</strong>
-          </div>
-          <div>
-            <span style="color: var(--admin-text-subtle); display: block; font-size: 0.78rem;">Type de démarche</span>
-            <strong>${escapeHTML(demande.type || 'Contact')}</strong>
+      <!-- Fiche Client -->
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--admin-border-subtle);">
+        <div class="user-avatar" style="width: 48px; height: 48px; font-size: 1.1rem; background-color: var(--admin-gold); color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+          ${escapeHTML(demande.nom?.charAt(0) || '?')}
+        </div>
+        <div style="flex: 1;">
+          <h4 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--admin-text);">${escapeHTML(demande.nom || 'Anonyme')}</h4>
+          <div style="display: flex; gap: 12px; margin-top: 4px; font-size: 0.84rem; flex-wrap: wrap;">
+            ${demande.email ? `<a href="mailto:${escapeHTML(demande.email)}" style="color: var(--admin-gold); font-weight: 500;">✉ ${escapeHTML(demande.email)}</a>` : ''}
+            ${demande.phone ? `<span>•</span><a href="tel:${escapeHTML(demande.phone)}" style="color: var(--admin-text-muted); font-weight: 500;">📞 ${escapeHTML(demande.phone)}</a>` : ''}
           </div>
         </div>
       </div>
 
-      <!-- Statut de la demande -->
-      <div style="margin-bottom: 20px;">
-        <label class="form-label" style="margin-bottom: 6px; font-weight: 600;">Statut de traitement</label>
+      <!-- Statut de traitement -->
+      <div style="margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background-color: var(--admin-surface-alt); border-radius: var(--radius-sm);">
+        <span style="font-weight: 600; font-size: 0.86rem; color: var(--admin-text);">Statut actuel :</span>
         <select class="form-select" id="drawer-status-select" style="padding: 6px 12px; font-weight: 600;">
           <option value="Nouveau" ${demande.status === 'Nouveau' ? 'selected' : ''}>Nouveau</option>
           <option value="En cours" ${demande.status === 'En cours' ? 'selected' : ''}>En cours</option>
@@ -507,13 +457,21 @@ function openDemandeDrawer(id) {
         </select>
       </div>
 
-      <!-- Message du client -->
-      <div style="margin-bottom: 24px;">
-        <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text);">Message ou description</h4>
-        <div style="padding: 16px; background-color: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-sm); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--admin-text);">
-          ${escapeHTML(demande.message || demande.details?.description || 'Aucun message textuel fourni.')}
+      <!-- Détails si fiche client -->
+      ${ficheClientBlock}
+
+      <!-- Détails si estimation -->
+      ${detailsBlock}
+
+      <!-- Message du client si contact classique -->
+      ${!isFicheClient ? `
+        <div style="margin-bottom: 24px;">
+          <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 600; color: var(--admin-text);">Message ou description</h4>
+          <div style="padding: 16px; background-color: #FFF; border: 1px solid var(--admin-border); border-radius: var(--radius-sm); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--admin-text);">
+            ${escapeHTML(demande.message || 'Aucun message textuel fourni.')}
+          </div>
         </div>
-      </div>
+      ` : ''}
     </div>
 
     <div class="drawer-footer">
@@ -531,7 +489,7 @@ function openDemandeDrawer(id) {
           </a>
         ` : ''}
         ${demande.email ? `
-          <a href="mailto:${escapeHTML(demande.email)}" class="btn btn-primary btn-sm">
+          <a href="mailto:${escapeHTML(demande.email)}?subject=Re: ${encodeURIComponent(demande.subject || 'Votre dossier sur Imolode')}" class="btn btn-primary btn-sm">
             ${adminIcon('mail', { size: 14 })} Répondre
           </a>
         ` : ''}
@@ -557,7 +515,7 @@ function openDemandeDrawer(id) {
 
   document.getElementById('drawer-btn-delete')?.addEventListener('click', async () => {
     const ok = await confirmModal({
-      title: 'Supprimer la demande ?',
+      title: 'Supprimer la demande',
       message: 'Êtes-vous sûr de vouloir supprimer cette demande ?',
       confirmText: 'Supprimer'
     });
@@ -568,6 +526,52 @@ function openDemandeDrawer(id) {
       renderResults();
     }
   });
+
+  // Écouteurs pour agrandir la pièce d'identité en Lightbox
+  drawer.querySelectorAll('.btn-zoom-doc').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const img = btn.dataset.img;
+      const caption = btn.dataset.caption;
+      if (img) openLightbox(img, caption);
+    });
+  });
+}
+
+function openLightbox(imgUrl, captionText) {
+  const lightbox = document.getElementById('image-lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  const lbClose = document.getElementById('lightbox-close');
+
+  if (!lightbox || !lbImg) return;
+
+  lbImg.src = imgUrl;
+  if (lbCaption) {
+    lbCaption.innerHTML = `
+      <span>${escapeHTML(captionText || "Pièce d'identité officielle")}</span>
+      <a href="${escapeHTML(imgUrl)}" download class="btn btn-outline btn-sm" style="color:#FFF; border-color:rgba(255,255,255,0.4);">
+        ${adminIcon('download', { size: 14 })} Télécharger
+      </a>
+    `;
+  }
+
+  lightbox.hidden = false;
+
+  const closeLb = () => {
+    lightbox.hidden = true;
+    lbImg.src = '';
+  };
+
+  lbClose.onclick = closeLb;
+  lightbox.onclick = (e) => {
+    if (e.target === lightbox || e.target === lbClose) {
+      closeLb();
+    }
+  };
+  window.onkeydown = (e) => {
+    if (e.key === 'Escape') closeLb();
+  };
 }
 
 function closeDrawer() {
@@ -579,3 +583,4 @@ function closeDrawer() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+

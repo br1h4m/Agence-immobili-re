@@ -20,9 +20,9 @@ export function asset(path = '') {
   return `${CONFIG.ASSETS_URL}/${String(path).replace(/^\/+/, '')}`;
 }
 
-/** URL propre d'une fiche bien : /client/bien.php?id=12 */
+/** URL propre d'une fiche bien : /client/bien/12 */
 export function propertyUrl(id) {
-  return `/client/bien.php?id=${encodeURIComponent(id)}`;
+  return url(`/bien/${id}`);
 }
 
 /** Lien tel: (ne garde que les chiffres et le "+") */
@@ -54,7 +54,7 @@ export function getQueryParams() {
 export function getPropertyId() {
   const fromQuery = new URLSearchParams(window.location.search).get('id');
   if (fromQuery) return fromQuery;
-  const match = window.location.pathname.match(/\/bien(?:\.php)?\/([^/]+)\/?$/);
+  const match = window.location.pathname.match(/\/bien\/([^/]+)\/?$/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 

@@ -65,7 +65,6 @@ $conn->query("
         `bien_id` INT DEFAULT NULL,
         `details_bien` TEXT DEFAULT NULL,
         `statut` VARCHAR(50) DEFAULT 'Nouveau',
-        `is_read` TINYINT(1) DEFAULT 0,
         `date_creation` DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
@@ -89,7 +88,6 @@ $conn->query("
         `piece_identite` VARCHAR(255) DEFAULT NULL,
         `signature` MEDIUMTEXT DEFAULT NULL,
         `statut` VARCHAR(50) DEFAULT 'Nouveau',
-        `is_read` TINYINT(1) DEFAULT 0,
         `date_creation` DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
@@ -108,7 +106,6 @@ $conn->query("
         `role` VARCHAR(50) DEFAULT 'Agent commercial',
         `poste` VARCHAR(100) DEFAULT NULL,
         `telephone` VARCHAR(50) DEFAULT NULL,
-        `avatar` VARCHAR(255) DEFAULT NULL,
         `actif` TINYINT(1) DEFAULT 1,
         `date_creation` DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

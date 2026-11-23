@@ -128,47 +128,20 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   transition: background var(--transition-fast), color var(--transition-fast),
               border-color var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
-.btn:hover {
-  transform: translateY(-1px);
-}
-.btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-}
+.btn:active { transform: translateY(1px); }
 
-.btn-primary {
-  background: var(--color-accent-dark, #8C7355);
-  color: #fff;
-  border-color: var(--color-accent-dark, #8C7355);
-  box-shadow: 0 2px 6px rgba(140, 115, 85, 0.28);
-}
-.btn-primary:hover {
-  background: #735D43;
-  border-color: #735D43;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(115, 93, 67, 0.38);
-}
+.btn-primary { background: var(--color-text); color: #fff; border-color: var(--color-text); }
+.btn-primary:hover { background: #000; border-color: #000; color: #fff; }
 
-.btn-outline {
-  border-color: #D6D2CA;
-  background: #FFFFFF;
-  color: var(--color-text);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.btn-outline:hover {
-  border-color: var(--color-accent-dark, #8C7355);
-  color: var(--color-accent-dark, #8C7355);
-  background: #FAF9F6;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
-}
+.btn-outline { border-color: var(--color-border); background: transparent; color: var(--color-text); }
+.btn-outline:hover { border-color: var(--color-text); color: var(--color-text); }
 
 .btn-outline-light { border-color: rgba(255,255,255,0.55); color: #fff; background: rgba(255,255,255,0.06); }
-.btn-outline-light:hover { background: rgba(255,255,255,0.14); border-color: #fff; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.btn-outline-light:hover { background: rgba(255,255,255,0.14); border-color: #fff; color: #fff; }
 
-.btn-ghost { background: transparent; color: var(--color-muted); padding: 10px 14px; box-shadow: none; }
-.btn-ghost:hover { color: var(--color-text); background: rgba(0,0,0,0.04); }
+.btn-ghost { background: transparent; color: var(--color-muted); padding: 10px 14px; }
+.btn-ghost:hover { color: var(--color-text); }
 
 .btn-sm { padding: 8px 14px; font-size: 0.82rem; }
 .btn-lg { padding: 15px 28px; font-size: 0.98rem; }

@@ -11,28 +11,10 @@ require_once __DIR__ . '/../backend/db.php';
 
 $activePage = 'services';
 
-// Récupération des paramètres CMS dynamiques
-$settings = [];
-$res_p = $conn->query("SELECT `cle`, `valeur` FROM `parametres`");
-if ($res_p) {
-    while ($row = $res_p->fetch_assoc()) {
-        $settings[$row['cle']] = $row['valeur'];
-    }
-}
-
-$service_achat_titre = !empty($settings['service_achat_titre']) ? $settings['service_achat_titre'] : 'Achat';
-$service_achat_desc = !empty($settings['service_achat_desc']) ? $settings['service_achat_desc'] : "Trouvez la propriété qui correspond à vos critères et vos exigences. Nous sélectionnons des biens vérifiés et vous accompagnons de la première visite jusqu'à la signature de l'acte authentique chez le notaire.";
-
-$service_location_titre = !empty($settings['service_location_titre']) ? $settings['service_location_titre'] : 'Location';
-$service_location_desc = !empty($settings['service_location_desc']) ? $settings['service_location_desc'] : "Accédez à un catalogue varié de logements et locaux professionnels. Nous sécurisons la rédaction du bail et l'état des lieux pour une relation locative sereine.";
-
-$service_estimation_titre = !empty($settings['service_estimation_titre']) ? $settings['service_estimation_titre'] : 'Estimation de bien';
-$service_estimation_desc = !empty($settings['service_estimation_desc']) ? $settings['service_estimation_desc'] : "Obtenez un avis de valeur professionnel et objectif basé sur les transactions réelles de votre secteur géographique et les spécificités de votre bien.";
-
 $services = [
     [
-        'title' => $service_achat_titre,
-        'desc' => $service_achat_desc,
+        'title' => 'Achat',
+        'desc' => "Trouvez la propriété qui correspond à vos critères et vos exigences. Nous sélectionnons des biens vérifiés et vous accompagnons de la première visite jusqu'à la signature de l'acte authentique chez le notaire.",
         'image' => 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=75',
         'icon' => '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
         'link' => '/client/biens.php?transaction=Acheter',
@@ -47,8 +29,8 @@ $services = [
         'btn' => 'Confier mon bien à la vente'
     ],
     [
-        'title' => $service_location_titre,
-        'desc' => $service_location_desc,
+        'title' => 'Location',
+        'desc' => "Accédez à un catalogue varié de logements et locaux professionnels. Nous sécurisons la rédaction du bail et l'état des lieux pour une relation locative sereine.",
         'image' => 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=75',
         'icon' => '<path d="m15 5 4 4"/><path d="M13 7 8.7 11.3a2 2 0 0 0-.58 1.23l-.18 3.53a1 1 0 0 0 1.05 1.05l3.53-.18a2 2 0 0 0 1.23-.58L18 12"/><circle cx="7.5" cy="16.5" r="2.5"/>',
         'link' => '/client/biens.php?transaction=Louer',
@@ -63,8 +45,8 @@ $services = [
         'btn' => 'En savoir plus'
     ],
     [
-        'title' => $service_estimation_titre,
-        'desc' => $service_estimation_desc,
+        'title' => 'Estimation de bien',
+        'desc' => "Obtenez un avis de valeur professionnel et objectif basé sur les transactions réelles de votre secteur géographique et les spécificités de votre bien.",
         'image' => 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=75',
         'icon' => '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
         'link' => '/client/estimation.php',
