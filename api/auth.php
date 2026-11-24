@@ -114,7 +114,9 @@ try {
                 'nom' => $user['nom'],
                 'email' => $user['email'],
                 'role' => $user['role'],
-                'poste' => $user['poste'] ?? 'Gestionnaire'
+                'poste' => $user['poste'] ?? 'Gestionnaire',
+                'telephone' => $user['telephone'] ?? '',
+                'avatar' => $user['avatar'] ?? null
             ];
 
             echo json_encode([

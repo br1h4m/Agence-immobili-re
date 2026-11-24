@@ -13,7 +13,7 @@
 /* Tablette */
 @media (max-width: 960px) {
   .property-layout { grid-template-columns: 1fr; }
-  .contact-panel { position: static !important; max-height: none !important; overflow-y: visible !important; }
+  .contact-panel { position: static; }
 }
 
 /* Tablette */

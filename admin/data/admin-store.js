@@ -11,6 +11,7 @@ const KEY_DEMANDES = 'immo_demandes';
 const KEY_FICHES_CLIENT = 'immo_fiches_client';
 const KEY_USERS = 'immo_users';
 const KEY_SETTINGS = 'immo_settings';
+const KEY_UNREAD_STATS = 'immo_unread_stats';
 
 const INITIAL_FICHES_CLIENT = [
   {
@@ -121,42 +122,75 @@ function writeStorage(key, data) {
   } catch (_) {}
 }
 
+let activeSyncPromise = null;
+
 /**
- * Synchronise les données locales avec l'API PHP en arrière-plan
+ * Synchronise les données locales avec l'API PHP (source de vérité MySQL)
  */
 export async function syncWithBackend() {
-  try {
-    const [resProps, resDemandes, resFiches, resSettings, resUsers] = await Promise.all([
-      fetch('/api/properties.php').then(r => r.ok ? r.json() : null),
-      fetch('/api/demandes.php').then(r => r.ok ? r.json() : null),
-      fetch('/api/fiches-client.php').then(r => r.ok ? r.json() : null),
-      fetch('/api/settings.php').then(r => r.ok ? r.json() : null),
-      fetch('/api/users.php').then(r => r.ok ? r.json() : null)
-    ]);
+  if (activeSyncPromise) return activeSyncPromise;
 
-    if (Array.isArray(resProps) && resProps.length > 0) {
-      writeStorage(KEY_PROPERTIES, resProps);
+  activeSyncPromise = (async () => {
+    const bust = `?_t=${Date.now()}`;
+    const opts = { cache: 'no-store' };
+    try {
+      const [resProps, resDemandes, resFiches, resSettings, resUsers, resStats] = await Promise.all([
+        fetch('/api/properties.php' + bust, opts).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/demandes.php' + bust, opts).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/fiches-client.php' + bust, opts).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/settings.php' + bust, opts).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/users.php' + bust, opts).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/stats.php' + bust, opts).then(r => r.ok ? r.json() : null).catch(() => null)
+      ]);
+
+      if (Array.isArray(resProps)) {
+        writeStorage(KEY_PROPERTIES, resProps);
+      }
+      if (Array.isArray(resDemandes)) {
+        writeStorage(KEY_DEMANDES, resDemandes);
+      }
+      if (Array.isArray(resFiches)) {
+        writeStorage(KEY_FICHES_CLIENT, resFiches);
+      }
+      if (resSettings && typeof resSettings === 'object' && !Array.isArray(resSettings)) {
+        writeStorage(KEY_SETTINGS, resSettings);
+      }
+      if (Array.isArray(resUsers)) {
+        writeStorage(KEY_USERS, resUsers);
+      }
+      if (resStats && typeof resStats === 'object' && !resStats.error) {
+        writeStorage(KEY_UNREAD_STATS, {
+          unreadDemandes: Number(resStats.unreadDemandes ?? resStats.demandes_non_lues ?? 0),
+          unreadFichesClient: Number(resStats.unreadFichesClient ?? resStats.fiches_non_lues ?? 0)
+        });
+      }
+      return true;
+    } catch (_) {
+      console.debug('Synchronisation API PHP en arrière-plan différée.');
+      return false;
+    } finally {
+      activeSyncPromise = null;
     }
-    if (Array.isArray(resDemandes) && resDemandes.length > 0) {
-      writeStorage(KEY_DEMANDES, resDemandes);
-    }
-    if (Array.isArray(resFiches) && resFiches.length > 0) {
-      writeStorage(KEY_FICHES_CLIENT, resFiches);
-    }
-    if (resSettings && typeof resSettings === 'object') {
-      writeStorage(KEY_SETTINGS, resSettings);
-    }
-    if (Array.isArray(resUsers) && resUsers.length > 0) {
-      writeStorage(KEY_USERS, resUsers);
-    }
-  } catch (err) {
-    // Mode dégradé si serveur injoignable
-    console.debug('Synchronisation API PHP en arrière-plan différée.');
-  }
+  })();
+
+  return activeSyncPromise;
 }
 
-// Déclenche une synchronisation initiale
-syncWithBackend();
+export function getUnreadBadgeCounts() {
+  try {
+    const cachedStats = readStorage(KEY_UNREAD_STATS, null);
+    if (cachedStats && typeof cachedStats.unreadDemandes === 'number' && typeof cachedStats.unreadFichesClient === 'number') {
+      return cachedStats;
+    }
+  } catch (_) {}
+
+  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  return {
+    unreadDemandes: Array.isArray(demandes) ? demandes.filter((d) => Number(d.is_read ?? 0) === 0).length : 0,
+    unreadFichesClient: Array.isArray(fiches) ? fiches.filter((f) => Number(f.is_read ?? 0) === 0).length : 0
+  };
+}
 
 /* ==========================================================================
    Biens immobiliers
@@ -297,23 +331,29 @@ export function updatePropertyStatus(id, newStatus) {
    ========================================================================== */
 
 export function getDemandes({ type = '', status = '', search = '' } = {}) {
-  const demandesRaw = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+  const demandesRaw = readStorage(KEY_DEMANDES, INITIAL_DEMANDES).map((d) => ({
+    ...d,
+    sourceType: 'demande',
+    uid: `demande:${d.id}`
+  }));
   const fichesRaw = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
 
-  // Normaliser les fiches client en format enrichi
+  // Normaliser les fiches client en format enrichi avec clé unique anti-collision
   const fichesFormatted = fichesRaw.map((f) => ({
     id: f.id,
+    sourceType: 'fiche_client',
+    uid: `fiche_client:${f.id}`,
     type: 'Fiche client',
     reference: f.reference,
     nom: `${f.nom || ''} ${f.prenom || ''}`.trim(),
     nomFamille: f.nom,
     prenom: f.prenom,
     email: f.email,
-    phone: f.telephone,
+    phone: f.telephone || f.phone,
     subject: `Dossier ${f.reference || ''} : ${f.transaction || 'Demande'} (${f.typeBien || 'Bien'})`,
     message: `Dossier officiel de constitution client — Opération : ${f.transaction || 'Demande'} | Bien : ${f.typeBien || 'Non spécifié'} | Justificatif : ${f.pieceIdentite?.name || 'Joint'} | Signature : Recueillie`,
     transaction: f.transaction,
-    typeBien: f.typeBien,
+    typeBien: f.typeBien || f.type_bien,
     pieceIdentite: f.pieceIdentite,
     signature: f.signature,
     engagementAccepte: f.engagementAccepte,
@@ -329,7 +369,7 @@ export function getDemandes({ type = '', status = '', search = '' } = {}) {
     list = list.filter((d) => d.type === type);
   }
   if (status) {
-    list = list.filter((d) => d.status === status);
+    list = list.filter((d) => d.status === status || (status === 'Traite' && d.status === 'Traité'));
   }
   if (search) {
     const q = search.toLowerCase().trim();
@@ -346,73 +386,96 @@ export function getDemandes({ type = '', status = '', search = '' } = {}) {
   return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-export function getDemandeById(id) {
-  const all = getDemandes();
-  return all.find((d) => String(d.id) === String(id)) || null;
+function parseUidOrSource(idOrUid, explicitSourceType = null) {
+  const str = String(idOrUid ?? '');
+  if (str.includes(':')) {
+    const [src, rawId] = str.split(':');
+    return { id: rawId, sourceType: explicitSourceType || src };
+  }
+  return { id: str, sourceType: explicitSourceType };
 }
 
-export function updateDemandeStatus(id, newStatus) {
-  // Vérifie d'abord si c'est une fiche client
-  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
-  const ficheItem = fiches.find((f) => String(f.id) === String(id));
-  if (ficheItem) {
-    ficheItem.status = newStatus;
-    writeStorage(KEY_FICHES_CLIENT, fiches);
+export function getDemandeById(idOrUid, sourceType = null) {
+  const parsed = parseUidOrSource(idOrUid, sourceType);
+  const all = getDemandes();
+  if (parsed.sourceType) {
+    return all.find((d) => String(d.id) === String(parsed.id) && d.sourceType === parsed.sourceType) || null;
+  }
+  return all.find((d) => String(d.id) === String(parsed.id)) || null;
+}
 
-    try {
-      fetch('/api/fiches-client.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', id, status: newStatus })
-      }).catch(() => {});
-    } catch (_) {}
+export function updateDemandeStatus(idOrUid, newStatus, sourceType = null) {
+  const parsed = parseUidOrSource(idOrUid, sourceType);
 
-    return true;
+  if (parsed.sourceType !== 'demande') {
+    const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+    const ficheItem = fiches.find((f) => String(f.id) === String(parsed.id));
+    if (ficheItem && (parsed.sourceType === 'fiche_client' || !sourceType)) {
+      ficheItem.status = newStatus;
+      writeStorage(KEY_FICHES_CLIENT, fiches);
+
+      try {
+        fetch('/api/fiches-client.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'status', id: parsed.id, status: newStatus })
+        }).catch(() => {});
+      } catch (_) {}
+
+      return true;
+    }
   }
 
-  // Sinon demande classique
-  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  const item = demandes.find((d) => String(d.id) === String(id));
-  if (item) {
-    item.status = newStatus;
-    writeStorage(KEY_DEMANDES, demandes);
+  if (parsed.sourceType !== 'fiche_client') {
+    const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+    const item = demandes.find((d) => String(d.id) === String(parsed.id));
+    if (item) {
+      item.status = newStatus;
+      writeStorage(KEY_DEMANDES, demandes);
 
-    try {
-      fetch('/api/demandes.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', id, status: newStatus })
-      }).catch(() => {});
-    } catch (_) {}
+      try {
+        fetch('/api/demandes.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'status', id: parsed.id, status: newStatus })
+        }).catch(() => {});
+      } catch (_) {}
 
-    return true;
+      return true;
+    }
   }
   return false;
 }
 
-export function deleteDemande(id) {
+export async function deleteDemande(idOrUid, sourceType = null) {
+  const parsed = parseUidOrSource(idOrUid, sourceType);
   let changed = false;
 
-  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
-  const fichesFiltered = fiches.filter((f) => String(f.id) !== String(id));
-  if (fichesFiltered.length !== fiches.length) {
-    writeStorage(KEY_FICHES_CLIENT, fichesFiltered);
-    changed = true;
-    try {
-      fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then(() => triggerBadgeSync()).catch(() => {});
-    } catch (_) {}
+  if (parsed.sourceType !== 'demande') {
+    const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+    const fichesFiltered = fiches.filter((f) => String(f.id) !== String(parsed.id));
+    if (fichesFiltered.length !== fiches.length && (parsed.sourceType === 'fiche_client' || !sourceType)) {
+      writeStorage(KEY_FICHES_CLIENT, fichesFiltered);
+      changed = true;
+      try {
+        await fetch(`/api/fiches-client.php?id=${encodeURIComponent(parsed.id)}`, { method: 'DELETE' });
+      } catch (_) {}
+    }
   }
 
-  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  const demandesFiltered = demandes.filter((d) => String(d.id) !== String(id));
-  if (demandesFiltered.length !== demandes.length) {
-    writeStorage(KEY_DEMANDES, demandesFiltered);
-    changed = true;
-    try {
-      fetch(`/api/demandes.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then(() => triggerBadgeSync()).catch(() => {});
-    } catch (_) {}
+  if (parsed.sourceType !== 'fiche_client' && (!changed || parsed.sourceType === 'demande')) {
+    const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+    const demandesFiltered = demandes.filter((d) => String(d.id) !== String(parsed.id));
+    if (demandesFiltered.length !== demandes.length) {
+      writeStorage(KEY_DEMANDES, demandesFiltered);
+      changed = true;
+      try {
+        await fetch(`/api/demandes.php?id=${encodeURIComponent(parsed.id)}`, { method: 'DELETE' });
+      } catch (_) {}
+    }
   }
 
+  await triggerBadgeSync();
   return changed;
 }
 
@@ -603,19 +666,24 @@ export function getSettings() {
   });
 }
 
-export function saveSettings(data) {
+export async function saveSettings(data) {
   const current = getSettings();
   const updated = { ...current, ...data };
   writeStorage(KEY_SETTINGS, updated);
 
-  try {
-    fetch('/api/settings.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated)
-    }).catch(() => {});
-  } catch (_) {}
-
+  const res = await fetch('/api/settings.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updated)
+  });
+  const result = await res.json().catch(() => null);
+  if (!res.ok || (result && result.success === false)) {
+    throw new Error(result?.error || `Erreur serveur (${res.status})`);
+  }
+  if (result?.data && typeof result.data === 'object') {
+    writeStorage(KEY_SETTINGS, result.data);
+    return result.data;
+  }
   return updated;
 }
 
@@ -670,9 +738,9 @@ export function getDashboardStats() {
    Opérations multiples (Bulk) & Gestion de la lecture (is_read)
    ========================================================================== */
 
-function triggerBadgeSync() {
+async function triggerBadgeSync() {
   if (typeof window !== 'undefined' && typeof window._syncBadgesNow === 'function') {
-    window._syncBadgesNow();
+    await window._syncBadgesNow();
   }
 }
 
@@ -695,28 +763,50 @@ export async function bulkDeleteProperties(ids = []) {
   }
 }
 
-export async function bulkDeleteDemandes(ids = []) {
-  if (!ids.length) return false;
-  const strIds = ids.map(String);
-  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
-  writeStorage(KEY_DEMANDES, demandes.filter((d) => !strIds.includes(String(d.id))));
-  writeStorage(KEY_FICHES_CLIENT, fiches.filter((f) => !strIds.includes(String(f.id))));
+export async function bulkDeleteDemandes(itemsOrUids = []) {
+  if (!itemsOrUids.length) return false;
+  const demandeIds = [];
+  const ficheIds = [];
+
+  itemsOrUids.forEach((entry) => {
+    const parsed = typeof entry === 'object' ? entry : parseUidOrSource(entry);
+    if (parsed.sourceType === 'fiche_client') ficheIds.push(parsed.id);
+    else if (parsed.sourceType === 'demande') demandeIds.push(parsed.id);
+    else {
+      demandeIds.push(parsed.id);
+      ficheIds.push(parsed.id);
+    }
+  });
+
+  if (demandeIds.length) {
+    const strD = demandeIds.map(String);
+    const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+    writeStorage(KEY_DEMANDES, demandes.filter((d) => !strD.includes(String(d.id))));
+  }
+  if (ficheIds.length) {
+    const strF = ficheIds.map(String);
+    const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+    writeStorage(KEY_FICHES_CLIENT, fiches.filter((f) => !strF.includes(String(f.id))));
+  }
 
   try {
-    await Promise.all([
-      fetch('/api/demandes.php', {
+    const ops = [];
+    if (demandeIds.length) {
+      ops.push(fetch('/api/demandes.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bulk_delete', ids })
-      }).catch(() => {}),
-      fetch('/api/fiches-client.php', {
+        body: JSON.stringify({ action: 'bulk_delete', ids: demandeIds })
+      }).catch(() => {}));
+    }
+    if (ficheIds.length) {
+      ops.push(fetch('/api/fiches-client.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bulk_delete', ids })
-      }).catch(() => {})
-    ]);
-    triggerBadgeSync();
+        body: JSON.stringify({ action: 'bulk_delete', ids: ficheIds })
+      }).catch(() => {}));
+    }
+    await Promise.all(ops);
+    await triggerBadgeSync();
     return true;
   } catch (_) {
     return false;
@@ -736,7 +826,7 @@ export async function bulkDeleteFichesClient(ids = []) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'bulk_delete', ids })
     });
-    triggerBadgeSync();
+    await triggerBadgeSync();
     return res.ok;
   } catch (_) {
     return false;
@@ -763,73 +853,98 @@ export async function bulkDeleteUsers(ids = []) {
   }
 }
 
-export async function markDemandeRead(id, is_read = 1) {
-  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  const target = demandes.find((d) => String(d.id) === String(id));
-  if (target) {
-    target.is_read = is_read;
+export async function markDemandeRead(idOrUid, is_read = 1, explicitSourceType = null) {
+  const parsed = parseUidOrSource(idOrUid, explicitSourceType);
+  const normalizedRead = is_read ? 1 : 0;
+  const apiAction = normalizedRead ? 'mark_read' : 'mark_unread';
+  const requests = [];
+
+  if (parsed.sourceType === 'fiche_client') {
+    const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+    const targetFiche = fiches.find((f) => String(f.id) === String(parsed.id));
+    if (targetFiche) {
+      targetFiche.is_read = normalizedRead;
+      writeStorage(KEY_FICHES_CLIENT, fiches);
+    }
+    requests.push(
+      fetch('/api/fiches-client.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: apiAction, id: parsed.id, is_read: normalizedRead })
+      }).catch(() => {})
+    );
+  } else {
+    const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+    const target = demandes.find((d) => String(d.id) === String(parsed.id));
+    if (target) {
+      target.is_read = normalizedRead;
+      writeStorage(KEY_DEMANDES, demandes);
+    }
+    requests.push(
+      fetch('/api/demandes.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: apiAction, id: parsed.id, is_read: normalizedRead })
+      }).catch(() => {})
+    );
+  }
+
+  await Promise.all(requests);
+  await triggerBadgeSync();
+}
+
+export async function bulkMarkDemandesRead(itemsOrUids = [], is_read = 1) {
+  if (!itemsOrUids.length) return false;
+  const normalizedRead = is_read ? 1 : 0;
+  const demandeIds = [];
+  const ficheIds = [];
+
+  itemsOrUids.forEach((entry) => {
+    const parsed = typeof entry === 'object' ? entry : parseUidOrSource(entry);
+    if (parsed.sourceType === 'fiche_client') ficheIds.push(parsed.id);
+    else if (parsed.sourceType === 'demande') demandeIds.push(parsed.id);
+    else {
+      demandeIds.push(parsed.id);
+      ficheIds.push(parsed.id);
+    }
+  });
+
+  if (demandeIds.length) {
+    const strD = demandeIds.map(String);
+    const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
+    demandes.forEach((d) => {
+      if (strD.includes(String(d.id))) d.is_read = normalizedRead;
+    });
     writeStorage(KEY_DEMANDES, demandes);
   }
-  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
-  const targetFiche = fiches.find((f) => String(f.id) === String(id));
-  if (targetFiche) {
-    targetFiche.is_read = is_read;
+
+  if (ficheIds.length) {
+    const strF = ficheIds.map(String);
+    const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+    fiches.forEach((f) => {
+      if (strF.includes(String(f.id))) f.is_read = normalizedRead;
+    });
     writeStorage(KEY_FICHES_CLIENT, fiches);
   }
 
-  const apiAction = is_read ? 'mark_read' : 'mark_unread';
-  const requests = [];
-  if (target || !targetFiche) {
-    requests.push(
-      fetch('/api/demandes.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: apiAction, id, is_read })
-      }).catch(() => {})
-    );
-  }
-  if (targetFiche) {
-    requests.push(
-      fetch('/api/fiches-client.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: apiAction, id, is_read })
-      }).catch(() => {})
-    );
-  }
-  await Promise.all(requests);
-  triggerBadgeSync();
-}
-
-export async function bulkMarkDemandesRead(ids = [], is_read = 1) {
-  if (!ids.length) return false;
-  const strIds = ids.map(String);
-  const demandes = readStorage(KEY_DEMANDES, INITIAL_DEMANDES);
-  demandes.forEach((d) => {
-    if (strIds.includes(String(d.id))) d.is_read = is_read;
-  });
-  writeStorage(KEY_DEMANDES, demandes);
-
-  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
-  fiches.forEach((f) => {
-    if (strIds.includes(String(f.id))) f.is_read = is_read;
-  });
-  writeStorage(KEY_FICHES_CLIENT, fiches);
-
   try {
-    await Promise.all([
-      fetch('/api/demandes.php', {
+    const ops = [];
+    if (demandeIds.length) {
+      ops.push(fetch('/api/demandes.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
-      }).catch(() => {}),
-      fetch('/api/fiches-client.php', {
+        body: JSON.stringify({ action: 'bulk_mark_read', ids: demandeIds, is_read: normalizedRead })
+      }).catch(() => {}));
+    }
+    if (ficheIds.length) {
+      ops.push(fetch('/api/fiches-client.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
-      }).catch(() => {})
-    ]);
-    triggerBadgeSync();
+        body: JSON.stringify({ action: 'bulk_mark_read', ids: ficheIds, is_read: normalizedRead })
+      }).catch(() => {}));
+    }
+    await Promise.all(ops);
+    await triggerBadgeSync();
     return true;
   } catch (_) {
     return false;
@@ -837,10 +952,11 @@ export async function bulkMarkDemandesRead(ids = [], is_read = 1) {
 }
 
 export async function markFicheRead(id, is_read = 1) {
+  const normalizedRead = is_read ? 1 : 0;
   const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
   const target = fiches.find((f) => String(f.id) === String(id));
   if (target) {
-    target.is_read = is_read;
+    target.is_read = normalizedRead;
     writeStorage(KEY_FICHES_CLIENT, fiches);
   }
 
@@ -848,18 +964,19 @@ export async function markFicheRead(id, is_read = 1) {
     await fetch('/api/fiches-client.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: is_read ? 'mark_read' : 'mark_unread', id, is_read })
+      body: JSON.stringify({ action: normalizedRead ? 'mark_read' : 'mark_unread', id, is_read: normalizedRead })
     });
-    triggerBadgeSync();
+    await triggerBadgeSync();
   } catch (_) {}
 }
 
 export async function bulkMarkFichesRead(ids = [], is_read = 1) {
   if (!ids.length) return false;
+  const normalizedRead = is_read ? 1 : 0;
   const strIds = ids.map(String);
   const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
   fiches.forEach((f) => {
-    if (strIds.includes(String(f.id))) f.is_read = is_read;
+    if (strIds.includes(String(f.id))) f.is_read = normalizedRead;
   });
   writeStorage(KEY_FICHES_CLIENT, fiches);
 
@@ -867,9 +984,9 @@ export async function bulkMarkFichesRead(ids = [], is_read = 1) {
     await fetch('/api/fiches-client.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
+      body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read: normalizedRead })
     });
-    triggerBadgeSync();
+    await triggerBadgeSync();
     return true;
   } catch (_) {
     return false;

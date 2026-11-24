@@ -9,11 +9,16 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../backend/config/Config.php';
+require_once __DIR__ . '/../backend/helpers/Uploader.php';
+
+use Immolode\Helpers\Uploader;
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Cache-Control: no-store, no-cache, must-revalidate');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -25,15 +30,28 @@ $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true) ?: $_POST;
 
 function format_fiche_row(array $r): array {
+    $pieceRaw = trim((string)($r['piece_identite'] ?? ''));
+    $pieceObj = null;
+    if ($pieceRaw !== '') {
+        $isUrl = str_starts_with($pieceRaw, '/') || str_starts_with($pieceRaw, 'http://') || str_starts_with($pieceRaw, 'https://');
+        $pieceUrl = $isUrl ? $pieceRaw : ('/uploads/documents/' . $pieceRaw);
+        $pieceObj = [
+            'name'    => basename($pieceRaw),
+            'url'     => $pieceUrl,
+            'dataUrl' => $pieceUrl
+        ];
+    }
+
     return array_merge($r, [
-        'id'        => (int)$r['id'],
-        'phone'     => $r['telephone'],
-        'typeBien'  => $r['type_bien'],
-        'idBien'    => $r['id_bien'],
-        'status'    => $r['statut'],
-        'is_read'   => (int)($r['is_read'] ?? 0),
-        'isRead'    => (bool)($r['is_read'] ?? 0),
-        'createdAt' => $r['date_creation']
+        'id'            => (int)$r['id'],
+        'phone'         => $r['telephone'],
+        'typeBien'      => $r['type_bien'],
+        'idBien'        => $r['id_bien'],
+        'pieceIdentite' => $pieceObj,
+        'status'        => $r['statut'],
+        'is_read'       => (int)($r['is_read'] ?? 0),
+        'isRead'        => (bool)($r['is_read'] ?? 0),
+        'createdAt'     => $r['date_creation']
     ]);
 }
 
@@ -136,18 +154,24 @@ try {
                 exit;
             }
 
-            // Marquer plusieurs comme lu
+            // Marquer plusieurs comme lu / non lu
             if ($action === 'bulk_mark_read') {
                 $ids = $input['ids'] ?? [];
+                $isReadVal = isset($input['is_read']) ? (int)(bool)$input['is_read'] : 1;
                 if (!is_array($ids) || empty($ids)) {
                     http_response_code(422);
                     echo json_encode(['success' => false, 'error' => 'Liste des IDs requise']);
                     exit;
                 }
-                $intIds = array_map('intval', $ids);
+                $intIds = array_values(array_filter(array_map('intval', $ids), fn($v) => $v > 0));
+                if (empty($intIds)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'IDs invalides']);
+                    exit;
+                }
                 $inClause = implode(',', $intIds);
-                $conn->query("UPDATE `fiches_client` SET `is_read` = 1 WHERE `id` IN ($inClause)");
-                echo json_encode(['success' => true, 'message' => count($intIds) . ' fiche(s) marquée(s) comme lue(s)']);
+                $conn->query("UPDATE `fiches_client` SET `is_read` = $isReadVal WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' fiche(s) mise(s) à jour']);
                 exit;
             }
 
@@ -173,8 +197,33 @@ try {
             $trans     = trim($input['transaction'] ?? 'Acheter');
             $typeBien  = trim($input['type_bien'] ?? $input['typeBien'] ?? 'Appartement');
             $idBien    = !empty($input['id_bien']) ? (int)$input['id_bien'] : null;
-            $pieceId   = !empty($input['piece_identite']) ? (string)$input['piece_identite'] : null;
-            $signature = !empty($input['signature']) ? (string)$input['signature'] : null;
+            $pieceRaw  = $input['piece_identite'] ?? $input['pieceIdentite'] ?? null;
+            $pieceId   = null;
+            if (is_array($pieceRaw)) {
+                if (!empty($pieceRaw['dataUrl']) && str_starts_with((string)$pieceRaw['dataUrl'], 'data:')) {
+                    $pieceId = Uploader::saveBase64Image((string)$pieceRaw['dataUrl'], 'documents', 'cni');
+                } elseif (!empty($pieceRaw['url'])) {
+                    $pieceId = (string)$pieceRaw['url'];
+                } elseif (!empty($pieceRaw['name'])) {
+                    $pieceId = basename((string)$pieceRaw['name']);
+                }
+            } elseif (!empty($pieceRaw)) {
+                $pieceStr = (string)$pieceRaw;
+                if (str_starts_with($pieceStr, 'data:')) {
+                    $pieceId = Uploader::saveBase64Image($pieceStr, 'documents', 'cni');
+                } else {
+                    $pieceId = $pieceStr;
+                }
+            }
+
+            $signatureRaw = !empty($input['signature']) ? (string)$input['signature'] : null;
+            $signature = $signatureRaw;
+            if ($signatureRaw && str_starts_with($signatureRaw, 'data:image/')) {
+                $savedSig = Uploader::saveBase64Image($signatureRaw, 'signatures', 'sig');
+                if ($savedSig) {
+                    $signature = $savedSig;
+                }
+            }
 
             if (empty($nom) || empty($prenom) || empty($tel)) {
                 http_response_code(422);
@@ -182,15 +231,15 @@ try {
                 exit;
             }
 
-            $ref = 'FC-' . date('Ymd') . '-' . str_pad((string)rand(100, 999), 3, '0', STR_PAD_LEFT);
+            $ref = !empty($input['reference']) ? trim((string)$input['reference']) : ('FC-' . date('Ymd') . '-' . str_pad((string)rand(100, 999), 3, '0', STR_PAD_LEFT));
 
             $stmt = $conn->prepare("
                 INSERT INTO `fiches_client` (
                     `reference`, `nom`, `prenom`, `telephone`, `email`,
-                    `transaction`, `type_bien`, `id_bien`, `piece_identite`, `signature`, `statut`
+                    `transaction`, `type_bien`, `id_bien`, `piece_identite`, `signature`, `statut`, `is_read`
                 ) VALUES (
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, 'Nouveau'
+                    ?, ?, ?, ?, ?, 'Nouveau', 0
                 )
             ");
             $stmt->bind_param(

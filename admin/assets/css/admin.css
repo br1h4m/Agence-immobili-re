@@ -56,28 +56,28 @@
 }
 
 [data-theme="dark"] {
-  --admin-bg: #121212;
-  --admin-surface: #1E1E1E;
-  --admin-surface-alt: #252525;
-  --admin-border: #333333;
-  --admin-border-subtle: #282828;
-  
-  --admin-text: #E5E5E5;
-  --admin-text-muted: #A0A0A0;
-  --admin-text-subtle: #707070;
-  
+  --admin-bg: #0f1117;
+  --admin-surface: #1a1d2e;
+  --admin-surface-alt: #242740;
+  --admin-border: #2e3250;
+  --admin-border-subtle: #252840;
+
+  --admin-text: #e8eaf6;
+  --admin-text-muted: #9095b0;
+  --admin-text-subtle: #6b7099;
+
   --admin-gold: #C5A880;
   --admin-gold-hover: #D4BC96;
   --admin-gold-soft: #2D271E;
   --admin-gold-border: #524430;
 
-  --admin-sidebar-bg: #0A0A0A;
-  --admin-sidebar-surface: #141414;
-  --admin-sidebar-border: #1E1E1E;
-  --admin-sidebar-text: #F0F0F0;
-  --admin-sidebar-muted: #808080;
+  --admin-sidebar-bg: #0f1117;
+  --admin-sidebar-surface: #1a1d2e;
+  --admin-sidebar-border: #2e3250;
+  --admin-sidebar-text: #e8eaf6;
+  --admin-sidebar-muted: #9095b0;
   --admin-sidebar-active: #C5A880;
-  
+
   --admin-success: #34D399;
   --admin-success-soft: #064E3B;
   --admin-warning: #FBBF24;
@@ -91,6 +91,122 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.7);
+}
+
+/* --- Dark theme : champs de formulaire --- */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: #1e2134;
+  color: #e8eaf6;
+  border-color: #3a3f6b;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #6b7099;
+}
+
+[data-theme="dark"] option {
+  background-color: #1e2134;
+  color: #e8eaf6;
+}
+
+/* --- Dark theme : tableaux --- */
+[data-theme="dark"] .admin-table th {
+  background-color: #242740;
+  color: #9095b0;
+}
+
+[data-theme="dark"] .admin-table td {
+  color: #c8cae8;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .admin-table tr:hover td {
+  background-color: #1e2134;
+}
+
+/* --- Dark theme : modales / drawers --- */
+[data-theme="dark"] .admin-modal,
+[data-theme="dark"] .admin-drawer {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .confirm-dialog,
+[data-theme="dark"] .swal2-popup,
+[data-theme="dark"] [role="dialog"] {
+  background-color: #1a1d2e !important;
+  color: #e8eaf6 !important;
+  border-color: #2e3250 !important;
+}
+
+/* --- Dark theme : boutons --- */
+[data-theme="dark"] .btn-outline {
+  border-color: #3a3f6b;
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .btn-outline:hover {
+  background-color: #242740;
+}
+
+/* --- Dark theme : topbar & sidebar --- */
+[data-theme="dark"] .admin-topbar {
+  background-color: #0f1117;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .admin-sidebar {
+  background-color: #0f1117;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .sidebar-link:hover,
+[data-theme="dark"] .sidebar-link.is-active {
+  background-color: #242740;
+}
+
+/* --- Dark theme : labels et cartes --- */
+[data-theme="dark"] .form-field label,
+[data-theme="dark"] .form-label {
+  color: #9095b0;
+}
+
+[data-theme="dark"] .admin-card {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+}
+
+/* --- Dark theme : dropdowns --- */
+[data-theme="dark"] .dropdown-menu {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+  background-color: #242740;
+}
+
+/* --- Dark theme : badges --- */
+[data-theme="dark"] .badge {
+  border-color: #2e3250;
+}
+
+/* --- Dark theme : flatpickr --- */
+[data-theme="dark"] .flatpickr-calendar {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .flatpickr-day {
+  color: #c8cae8;
+}
+
+[data-theme="dark"] .flatpickr-day:hover {
+  background-color: #242740;
 }
 
 *, *::before, *::after {

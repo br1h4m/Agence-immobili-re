@@ -280,8 +280,8 @@ if ($property) {
 
           </div>
 
-          <!-- Colonne droite : Panneau de contact de l'agence optimisé pour le défilement -->
-          <aside class="contact-panel" style="position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: thin; padding: 18px 20px;">
+          <!-- Colonne droite : Panneau de contact fixe à sa place dans la page -->
+          <aside class="contact-panel">
             <h3 style="margin-bottom: 4px;">Contacter l'agence</h3>
             <p style="margin-bottom: 12px; font-size: 0.84rem;">Nos conseillers sont à votre disposition pour organiser une visite.</p>
 
@@ -442,32 +442,23 @@ if ($property) {
         });
       }
 
-      // 3. Initialisation de la carte interactive Leaflet
+      // 3. Initialisation de la carte interactive Leaflet — Siège agence Imolode
       var mapEl = document.getElementById('property-map');
       if (mapEl && typeof L !== 'undefined') {
-        var lat = <?= $property['latitude'] ?? 36.7511 ?>;
-        var lng = <?= $property['longitude'] ?? 5.0567 ?>;
-        var commune = <?= json_encode(strtolower($property['commune'] ?? '')) ?>;
-        var wilaya = <?= json_encode(strtolower($property['wilaya'] ?? '')) ?>;
+        // Coordonnées fixes du siège de l'agence : 41 Bld Soudani Boudjemaa El Mouradia, Alger
+        var lat = 36.7538;
+        var lng = 3.0588;
 
-        if (commune.indexOf('tichy') !== -1) { lat = 36.666; lng = 5.163; }
-        else if (commune.indexOf('aokas') !== -1) { lat = 36.638; lng = 5.244; }
-        else if (commune.indexOf('akbou') !== -1) { lat = 36.457; lng = 4.544; }
-        else if (commune.indexOf('souk') !== -1) { lat = 36.621; lng = 5.334; }
-        else if (commune.indexOf('kseur') !== -1) { lat = 36.684; lng = 4.902; }
-        else if (wilaya.indexOf('alger') !== -1 || commune.indexOf('hydra') !== -1) { lat = 36.753; lng = 3.058; }
-        else if (wilaya.indexOf('oran') !== -1) { lat = 35.698; lng = -0.633; }
-        else if (wilaya.indexOf('constantine') !== -1) { lat = 36.365; lng = 6.614; }
-        else if (wilaya.indexOf('setif') !== -1 || wilaya.indexOf('sétif') !== -1) { lat = 36.190; lng = 5.413; }
-        else if (wilaya.indexOf('tizi') !== -1) { lat = 36.711; lng = 4.045; }
-
-        var map = L.map('property-map', { scrollWheelZoom: false }).setView([lat, lng], 13);
+        var map = L.map('property-map', { scrollWheelZoom: false }).setView([lat, lng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19
         }).addTo(map);
 
-        var marker = L.marker([lat, lng]).addTo(map);
-        marker.bindPopup('<strong><?= addslashes(e($titre)) ?></strong><br><?= addslashes(e($full_location)) ?>').openPopup();
+        L.marker([lat, lng])
+          .addTo(map)
+          .bindPopup('<strong>Imolode</strong><br>41 Bld Soudani Boudjemaa El Mouradia<br>El Mouradia, Alger')
+          .openPopup();
       }
 
       // 4. Soumission directe AJAX du formulaire de contact

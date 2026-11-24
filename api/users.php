@@ -8,11 +8,16 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../backend/config/Config.php';
+require_once __DIR__ . '/../backend/helpers/Uploader.php';
+
+use Immolode\Helpers\Uploader;
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Cache-Control: no-store, no-cache, must-revalidate');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -39,6 +44,24 @@ function validate_user_fields(string $nom, string $email, string $tel): ?string 
         }
     }
     return null;
+}
+
+function normalize_avatar_input(mixed $raw, string $prefix = 'avatar'): ?string {
+    $avatar = isset($raw) ? trim((string)$raw) : null;
+    if ($avatar === '' || $avatar === null) {
+        return null;
+    }
+    if (str_starts_with($avatar, 'data:image/')) {
+        $savedUrl = Uploader::saveBase64Image($avatar, 'avatars', $prefix);
+        if (!$savedUrl) {
+            throw new \InvalidArgumentException('Format d\'image invalide.');
+        }
+        return $savedUrl;
+    }
+    if (strlen($avatar) > 255) {
+        throw new \InvalidArgumentException('L\'URL de l\'avatar dépasse 255 caractères. Utilisez le téléversement de fichier.');
+    }
+    return $avatar;
 }
 
 try {
@@ -88,7 +111,13 @@ try {
                 $nom = trim($input['nom'] ?? '');
                 $email = strtolower(trim($input['email'] ?? ''));
                 $tel = trim($input['telephone'] ?? $input['phone'] ?? '');
-                $avatar = isset($input['avatar']) ? trim((string)$input['avatar']) : null;
+                try {
+                    $avatar = normalize_avatar_input($input['avatar'] ?? null, 'avatar_' . $id);
+                } catch (\InvalidArgumentException $e) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                    exit;
+                }
 
                 if ($err = validate_user_fields($nom, $email, $tel)) {
                     http_response_code(422);
@@ -111,6 +140,13 @@ try {
                 $stmtFresh->bind_param("i", $id);
                 $stmtFresh->execute();
                 $fresh = $stmtFresh->get_result()->fetch_assoc();
+
+                if (session_status() === PHP_SESSION_NONE) {
+                    @session_start();
+                }
+                if (!empty($_SESSION['admin_user']) && (int)($_SESSION['admin_user']['id'] ?? 0) === $id && $fresh) {
+                    $_SESSION['admin_user'] = array_merge($_SESSION['admin_user'], $fresh);
+                }
 
                 echo json_encode([
                     'success' => true,
@@ -162,7 +198,13 @@ try {
                 $poste = trim($input['poste'] ?? 'Conseiller');
                 $tel = trim($input['telephone'] ?? $input['phone'] ?? '');
                 $actif = isset($input['actif']) ? (int)$input['actif'] : 1;
-                $avatar = isset($input['avatar']) ? trim((string)$input['avatar']) : null;
+                try {
+                    $avatar = normalize_avatar_input($input['avatar'] ?? null, 'avatar_' . $id);
+                } catch (\InvalidArgumentException $e) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                    exit;
+                }
 
                 if ($err = validate_user_fields($nom, $email, $tel)) {
                     http_response_code(422);
@@ -191,7 +233,13 @@ try {
             $role  = trim($input['role'] ?? 'Agent');
             $poste = trim($input['poste'] ?? 'Conseiller');
             $tel   = trim($input['telephone'] ?? $input['phone'] ?? '');
-            $avatar = isset($input['avatar']) ? trim((string)$input['avatar']) : null;
+            try {
+                $avatar = normalize_avatar_input($input['avatar'] ?? null, 'avatar_new');
+            } catch (\InvalidArgumentException $e) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
 
             if ($err = validate_user_fields($nom, $email, $tel)) {
                 http_response_code(422);

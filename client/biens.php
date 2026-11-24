@@ -241,6 +241,7 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
         
         <div style="margin: 32px auto 0; max-width: 920px; text-align: left;">
           <form class="search-bar search-bar--compact" action="/client/biens.php" method="GET" role="search" aria-label="Recherche rapide">
+            <!-- Filtres principaux -->
             <div class="search-field">
               <label for="sb-transaction">Transaction</label>
               <select id="sb-transaction" name="transaction">
@@ -261,8 +262,18 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
             </div>
 
             <div class="search-field">
-              <label for="sb-location">Localisation / Mot-clé</label>
-              <input id="sb-location" name="q" type="text" placeholder="Ville, quartier..." value="<?= e($q) ?>">
+              <label for="sb-wilaya">Wilaya</label>
+              <select id="sb-wilaya" name="wilaya">
+                <option value="">Toutes les wilayas</option>
+                <?php foreach ($available_wilayas as $w): ?>
+                  <option value="<?= e($w) ?>" <?= $wilaya === $w ? 'selected' : '' ?>><?= e($w) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="search-field">
+              <label for="sb-city">Quartier / Commune</label>
+              <input id="sb-city" name="city" type="text" placeholder="Quartier, commune..." value="<?= e($city) ?>">
             </div>
 
             <div class="search-field">
@@ -277,10 +288,63 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
               </select>
             </div>
 
+            <div class="search-field">
+              <label for="sb-surface">Surface max (m²)</label>
+              <select id="sb-surface" name="maxSurface">
+                <option value="">Indifférente</option>
+                <option value="50" <?= $maxSurface === 50.0 ? 'selected' : '' ?>>Jusqu'à 50 m²</option>
+                <option value="100" <?= $maxSurface === 100.0 ? 'selected' : '' ?>>Jusqu'à 100 m²</option>
+                <option value="200" <?= $maxSurface === 200.0 ? 'selected' : '' ?>>Jusqu'à 200 m²</option>
+                <option value="500" <?= $maxSurface === 500.0 ? 'selected' : '' ?>>Jusqu'à 500 m²</option>
+                <option value="1000" <?= $maxSurface === 1000.0 ? 'selected' : '' ?>>Jusqu'à 1 000 m²</option>
+              </select>
+            </div>
+
             <button type="submit" class="btn btn-primary" aria-label="Rechercher">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </button>
+
+            <!-- Filtres avancés (cachés par défaut) -->
+            <div id="advanced-filters-toggle" style="width:100%; margin-top:4px;">
+              <button type="button" id="btn-advanced-filters" onclick="toggleAdvancedFilters()" style="background:none;border:none;cursor:pointer;color:var(--color-accent);font-size:0.85rem;padding:4px 0;display:flex;align-items:center;gap:5px;">
+                <svg id="adv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;transform:rotate(<?= ($bedrooms !== null || $bathrooms !== null) ? '180' : '0' ?>deg)"><path d="m6 9 6 6 6-6"/></svg>
+                Filtres avancés
+              </button>
+              <div id="advanced-filters-panel" style="display:<?= ($bedrooms !== null || $bathrooms !== null) ? 'flex' : 'none' ?>;flex-wrap:wrap;gap:12px;margin-top:10px;width:100%;">
+                <div class="search-field">
+                  <label for="sb-bedrooms">Chambres min.</label>
+                  <select id="sb-bedrooms" name="bedrooms">
+                    <option value="">Peu importe</option>
+                    <?php for ($i = 1; $i <= 6; $i++): ?>
+                      <option value="<?= $i ?>" <?= $bedrooms === $i ? 'selected' : '' ?>><?= $i ?>+</option>
+                    <?php endfor; ?>
+                  </select>
+                </div>
+                <div class="search-field">
+                  <label for="sb-bathrooms">Salles de bain min.</label>
+                  <select id="sb-bathrooms" name="bathrooms">
+                    <option value="">Peu importe</option>
+                    <?php for ($i = 1; $i <= 4; $i++): ?>
+                      <option value="<?= $i ?>" <?= $bathrooms === $i ? 'selected' : '' ?>><?= $i ?>+</option>
+                    <?php endfor; ?>
+                  </select>
+                </div>
+                <div class="search-field">
+                  <label for="sb-q">Mot-clé</label>
+                  <input id="sb-q" name="q" type="text" placeholder="Description, titre..." value="<?= e($q) ?>">
+                </div>
+              </div>
+            </div>
           </form>
+          <script>
+          function toggleAdvancedFilters() {
+            var panel = document.getElementById('advanced-filters-panel');
+            var arrow = document.getElementById('adv-arrow');
+            var isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : 'flex';
+            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+          }
+          </script>
         </div>
       </div>
     </section>

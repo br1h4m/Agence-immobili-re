@@ -15,6 +15,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Cache-Control: no-store, no-cache, must-revalidate');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -131,18 +132,24 @@ try {
                 exit;
             }
 
-            // Marquer plusieurs comme lu
+            // Marquer plusieurs comme lu / non lu
             if ($action === 'bulk_mark_read') {
                 $ids = $input['ids'] ?? [];
+                $isReadVal = isset($input['is_read']) ? (int)(bool)$input['is_read'] : 1;
                 if (!is_array($ids) || empty($ids)) {
                     http_response_code(422);
                     echo json_encode(['success' => false, 'error' => 'Liste des IDs requise']);
                     exit;
                 }
-                $intIds = array_map('intval', $ids);
+                $intIds = array_values(array_filter(array_map('intval', $ids), fn($v) => $v > 0));
+                if (empty($intIds)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => 'IDs invalides']);
+                    exit;
+                }
                 $inClause = implode(',', $intIds);
-                $conn->query("UPDATE `demandes` SET `is_read` = 1 WHERE `id` IN ($inClause)");
-                echo json_encode(['success' => true, 'message' => count($intIds) . ' demande(s) marquée(s) comme lue(s)']);
+                $conn->query("UPDATE `demandes` SET `is_read` = $isReadVal WHERE `id` IN ($inClause)");
+                echo json_encode(['success' => true, 'message' => count($intIds) . ' demande(s) mise(s) à jour']);
                 exit;
             }
 
@@ -182,8 +189,8 @@ try {
             }
 
             $stmt = $conn->prepare("
-                INSERT INTO `demandes` (`type`, `nom`, `email`, `telephone`, `sujet`, `message`, `details_bien`, `bien_id`, `statut`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Nouveau')
+                INSERT INTO `demandes` (`type`, `nom`, `email`, `telephone`, `sujet`, `message`, `details_bien`, `bien_id`, `statut`, `is_read`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Nouveau', 0)
             ");
             $stmt->bind_param("sssssssi", $type, $nom, $email, $tel, $sujet, $message, $details_bien, $bien_id);
             $stmt->execute();

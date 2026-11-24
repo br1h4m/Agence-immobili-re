@@ -11,6 +11,8 @@ require_once __DIR__ . '/../backend/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
 
 try {
     // 1. Biens immobiliers
