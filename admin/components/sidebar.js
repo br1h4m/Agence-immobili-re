@@ -5,6 +5,10 @@ import { adminIcon, escapeHTML } from '/admin/assets/js/admin.js';
 import { getCurrentUser } from '/admin/includes/auth.js';
 import { getDashboardStats } from '/admin/data/admin-store.js';
 
+const ICONS_SIDEBAR = {
+  'chevrons-left': '<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>'
+};
+
 export function Sidebar({ activePage = 'dashboard' } = {}) {
   const user = getCurrentUser() || { nom: 'Administrateur', role: 'Admin' };
   const stats = getDashboardStats();
@@ -58,20 +62,24 @@ export function Sidebar({ activePage = 'dashboard' } = {}) {
       <div class="sidebar-footer">
         <a href="/client/" target="_blank" rel="noopener" class="sidebar-external-link">
           <span>${adminIcon('external', { size: 16 })}</span>
-          <span>Voir le site public</span>
+          <span class="sidebar-label">Voir le site public</span>
         </a>
 
         <div class="sidebar-user" id="sidebar-user-profile" style="cursor: pointer;" title="Modifier mes informations personnelles">
           <div class="user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: var(--admin-primary); color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; overflow: hidden;">
             ${user.avatar ? `<img src="${escapeHTML(user.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : escapeHTML(user.nom?.charAt(0) || 'A')}
           </div>
-          <div class="user-meta">
+          <div class="user-meta sidebar-label">
             <p class="user-name">${escapeHTML(user.nom || 'Admin')}</p>
             <p class="user-role">${escapeHTML(user.role || 'Administrateur')}</p>
           </div>
-          <button type="button" class="logout-btn" id="btn-logout" title="Déconnexion" aria-label="Déconnexion">
+          <button type="button" class="logout-btn sidebar-label" id="btn-logout" title="Déconnexion" aria-label="Déconnexion">
             ${adminIcon('logout', { size: 18 })}
           </button>
+        </div>
+
+        <div class="sidebar-collapse-btn" id="sidebar-collapse-btn" title="Réduire le menu">
+          ${adminIcon('chevrons-left', { size: 20 })}
         </div>
       </div>
     </aside>

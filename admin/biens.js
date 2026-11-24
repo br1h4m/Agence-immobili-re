@@ -109,9 +109,9 @@ async function init() {
 
   // Bouton importer
   document.getElementById('btn-import-biens')?.addEventListener('click', () => {
-    openCsvImportModal('biens', () => {
+    openCsvImportModal({ model: 'biens', title: 'Importer des biens', onImportSuccess: () => {
       syncWithBackend().then(() => renderResults());
-    });
+    } });
   });
 
   // Bouton mode sélection

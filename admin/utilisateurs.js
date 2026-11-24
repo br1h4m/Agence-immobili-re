@@ -65,9 +65,9 @@ async function init() {
 
   // Bouton importer
   document.getElementById('btn-import-users')?.addEventListener('click', () => {
-    openCsvImportModal('utilisateurs', () => {
+    openCsvImportModal({ model: 'utilisateurs', title: 'Importer des utilisateurs', onImportSuccess: () => {
       renderUsers();
-    });
+    } });
   });
 
   // Bouton mode sélection
@@ -366,15 +366,21 @@ function openUserDrawer(id = null) {
         <div class="form-section">
           <!-- Photo / Avatar -->
           <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label" for="user-input-avatar">Photo de profil (URL ou lien direct)</label>
+            <label class="form-label" for="user-input-avatar">Photo de profil</label>
             <div style="display: flex; gap: 12px; align-items: center;">
               <div id="user-avatar-preview" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--admin-gold); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 ${user?.avatar ? `<img src="${escapeHTML(user.avatar)}" style="width:100%;height:100%;object-fit:cover;">` : escapeHTML(user?.nom?.charAt(0) || 'U')}
               </div>
-              <input type="url" class="form-input" id="user-input-avatar" value="${escapeHTML(user?.avatar || '')}" placeholder="https://images.unsplash.com/photo-...">
+              <div style="flex: 1;">
+                <input type="url" class="form-input" id="user-input-avatar" value="${escapeHTML(user?.avatar || '')}" placeholder="https://images.unsplash.com/photo-..." style="margin-bottom: 6px;">
+                <input type="file" id="user-avatar-file" accept="image/*" style="display:none;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-upload-user-avatar">
+                  ${adminIcon('camera', { size: 14 })} <span>Téléverser</span>
+                </button>
+              </div>
             </div>
             <p class="form-hint" style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:4px;">
-              Laissez vide pour utiliser les initiales du nom.
+              Collez une URL ou téléversez une image. Laissez vide pour les initiales.
             </p>
           </div>
 
@@ -438,6 +444,36 @@ function openUserDrawer(id = null) {
     if (preview) {
       if (val) preview.innerHTML = `<img src="${escapeHTML(val)}" style="width:100%;height:100%;object-fit:cover;">`;
       else preview.textContent = document.getElementById('user-input-nom')?.value?.charAt(0) || 'U';
+    }
+  });
+
+  // Upload avatar file
+  const avatarFileInput = document.getElementById('user-avatar-file');
+  document.getElementById('btn-upload-user-avatar')?.addEventListener('click', () => {
+    avatarFileInput?.click();
+  });
+  avatarFileInput?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload.php', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success && data.url) {
+        avatarInput.value = data.url;
+        const preview = document.getElementById('user-avatar-preview');
+        if (preview) preview.innerHTML = `<img src="${escapeHTML(data.url)}" style="width:100%;height:100%;object-fit:cover;">`;
+      }
+    } catch (err) {
+      // Fallback : DataURL locale
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        avatarInput.value = ev.target.result;
+        const preview = document.getElementById('user-avatar-preview');
+        if (preview) preview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+      };
+      reader.readAsDataURL(file);
     }
   });
 

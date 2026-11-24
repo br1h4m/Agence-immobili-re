@@ -248,7 +248,8 @@ const ICONS = {
   'arrow-left': '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
   'chevron-left': '<path d="m15 18-6-6 6-6"/>',
   'chevron-right': '<path d="m9 18 6-6-6-6"/>',
-  'chevron-down': '<path d="m6 9 6 6 6-6"/>'
+  'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+  'maximize': '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>'
 };
 
 /** Retourne une icône SVG inline. icon('bed', { size: 18 }) */

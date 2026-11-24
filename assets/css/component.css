@@ -114,10 +114,22 @@
 }
 .search-field select, .search-field input {
   border: 0; padding: 0; background: transparent;
-  font-size: 0.95rem; color: var(--color-text); height: 24px;
+  font-size: 0.95rem; color: var(--color-text); height: 28px;
 }
-.search-field select { background-image: none; padding-right: 0; }
-.search-field select:focus, .search-field input:focus { box-shadow: none; outline: none; }
+.search-field select {
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b59a6a' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 14px;
+  padding-right: 24px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+.search-field select:hover { background-color: rgba(181, 154, 106, 0.08); }
+.search-field select:focus { box-shadow: 0 0 0 2px rgba(181, 154, 106, 0.3); outline: none; border-radius: 4px; }
+.search-field input:focus { box-shadow: none; outline: none; }
 .search-bar button[type="submit"] {
   background: var(--color-accent);
   color: #FFFFFF;

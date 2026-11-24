@@ -28,7 +28,7 @@ export function PropertyGallery(images = [], { title = '' } = {}) {
           ${icon('chevron-right', { size: 24 })}
         </button>
         <button type="button" class="gallery-expand" data-gallery-open aria-label="Voir en plein écran">
-          ${icon('plus', { size: 18 })}
+          ${icon('maximize', { size: 18 })}
         </button>
         <span class="gallery-counter" data-gallery-counter>1 / ${images.length}</span>
       </div>

@@ -108,12 +108,12 @@ async function init() {
 
   // Importer
   document.getElementById('btn-import-fiches')?.addEventListener('click', () => {
-    openCsvImportModal('fiches_client', () => {
+    openCsvImportModal({ model: 'fiches_client', title: 'Importer des fiches client', onImportSuccess: () => {
       syncWithBackend().then(() => {
         renderStats();
         renderResults();
       });
-    });
+    } });
   });
 
   // Toggle mode sélection
@@ -555,7 +555,11 @@ function openDrawer(id) {
   if (!drawer) return;
 
   const doc = fiche.pieceIdentite || {};
-  const isImageDoc = doc.dataUrl && !doc.name?.toLowerCase().endsWith('.pdf');
+  // Support both dataUrl (uploaded via browser) and filename (stored in DB as /uploads/documents/)
+  const docSrc = doc.dataUrl || (doc.name ? '/uploads/documents/' + doc.name : null);
+  const docName = doc.name || '';
+  const isPdf = docName.toLowerCase().endsWith('.pdf');
+  const isImageDoc = docSrc && !isPdf;
 
   drawer.innerHTML = `
     <div class="drawer-header">
@@ -644,8 +648,8 @@ function openDrawer(id) {
             </div>
 
             ${isImageDoc ? `
-              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Pièce d'identité — ${escapeHTML(`${fiche.nom || ''} ${fiche.prenom || ''}`)}" title="Cliquez pour zoomer">
-                <img src="${escapeHTML(doc.dataUrl)}" alt="Pièce d'identité" class="doc-inspect-img">
+              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(docSrc)}" data-caption="Pièce d'identité — ${escapeHTML(`${fiche.nom || ''} ${fiche.prenom || ''}`)}" title="Cliquez pour zoomer">
+                <img src="${escapeHTML(docSrc)}" alt="Pièce d'identité" class="doc-inspect-img">
                 <div class="doc-inspect-overlay">
                   ${adminIcon('search', { size: 18 })}
                   <span>Cliquer pour inspecter en plein écran</span>

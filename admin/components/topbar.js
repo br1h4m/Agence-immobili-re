@@ -18,7 +18,7 @@ export function Topbar({ title = 'Administration', breadcrumbs = [], action = nu
   if (action) {
     if (action.href && action.href !== '#') {
       actionHtml = `
-        <a href="${action.href}" class="btn btn-primary btn-sm topbar-action" id="${action.id || ''}">
+        <a href="${action.href}" class="btn btn-primary btn-sm topbar-action" id="${action.id || ''}" ${action.target ? `target="${action.target}"` : ''}>
           ${action.icon ? adminIcon(action.icon, { size: 16 }) : ''}
           <span>${escapeHTML(action.label)}</span>
         </a>
@@ -32,6 +32,8 @@ export function Topbar({ title = 'Administration', breadcrumbs = [], action = nu
       `;
     }
   }
+
+  const initials = (user.nom || 'A').split(' ').map(w => w.charAt(0)).slice(0, 2).join('').toUpperCase();
 
   return `
     <header class="admin-topbar">
@@ -54,12 +56,22 @@ export function Topbar({ title = 'Administration', breadcrumbs = [], action = nu
           <span class="theme-icon-dark" style="display:none;">${adminIcon('moon', { size: 18 })}</span>
         </button>
 
-        <!-- Mon Compte -->
-        <div class="topbar-user" id="topbar-user-profile" style="cursor: pointer;" title="Modifier mes informations personnelles">
-          <div class="user-avatar" style="width: 28px; height: 28px; border-radius: 50%; background: var(--admin-primary); color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; overflow: hidden;">
-            ${user.avatar ? `<img src="${escapeHTML(user.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : escapeHTML(user.nom?.charAt(0) || 'A')}
+        <!-- Menu utilisateur avec dropdown -->
+        <div class="topbar-user-menu" id="topbar-user-menu">
+          <div class="topbar-avatar" id="topbar-avatar-btn" title="Mon compte">
+            ${user.avatar
+              ? `<img src="${escapeHTML(user.avatar)}" alt="Avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+              : ''}
+            <span class="topbar-avatar-initials" style="${user.avatar ? 'display:none' : 'display:flex'}">${escapeHTML(initials)}</span>
           </div>
-          <span class="user-greeting">Bonjour, <strong>${escapeHTML(user.nom || 'Admin')}</strong></span>
+          <div class="topbar-dropdown" id="topbar-dropdown" style="display:none">
+            <div class="topbar-dropdown-item" id="topbar-menu-profile">
+              ${adminIcon('user', { size: 16 })} Mon Profil
+            </div>
+            <div class="topbar-dropdown-item" id="topbar-menu-logout">
+              ${adminIcon('logout', { size: 16 })} Déconnexion
+            </div>
+          </div>
         </div>
       </div>
     </header>

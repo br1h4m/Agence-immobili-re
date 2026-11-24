@@ -80,7 +80,8 @@ const ICONS = {
   'sun': '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
-  'camera': '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>'
+  'camera': '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  'chevrons-left': '<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>'
 };
 
 export function adminIcon(name, { size = 18, className = '' } = {}) {
@@ -419,6 +420,7 @@ export function startRealtimeBadgeSync() {
   };
 
   sync();
+  window._syncBadgesNow = sync; // expose pour appel externe immédiat
   badgeSyncInterval = setInterval(sync, 15000);
 }
 
@@ -745,8 +747,8 @@ export async function initAdminLayout({ activePage = 'dashboard', title = 'Admin
     toggleTheme();
   });
 
-  // 3. Déclencheur Mon Profil
-  document.getElementById('topbar-user-profile')?.addEventListener('click', () => {
+  // 3. Déclencheur Mon Profil (depuis dropdown avatar topbar)
+  document.getElementById('topbar-menu-profile')?.addEventListener('click', () => {
     openProfileModal();
   });
   document.getElementById('sidebar-user-profile')?.addEventListener('click', (e) => {
@@ -754,7 +756,33 @@ export async function initAdminLayout({ activePage = 'dashboard', title = 'Admin
     openProfileModal();
   });
 
-  // 4. Confirmation de déconnexion (Point 2.17)
+  // Dropdown avatar toggle
+  const avatarBtn = document.getElementById('topbar-avatar-btn');
+  const dropdown = document.getElementById('topbar-dropdown');
+  if (avatarBtn && dropdown) {
+    avatarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#topbar-user-menu')) {
+        dropdown.style.display = 'none';
+      }
+    });
+  }
+
+  // Déconnexion depuis dropdown
+  document.getElementById('topbar-menu-logout')?.addEventListener('click', async () => {
+    const ok = await confirmModal({
+      title: 'Déconnexion',
+      message: 'Êtes-vous sûr de vouloir vous déconnecter de votre espace d\'administration ?',
+      confirmText: 'Se déconnecter',
+      cancelText: 'Rester connecté'
+    });
+    if (ok) logout();
+  });
+
+  // 4. Confirmation de déconnexion (sidebar logout)
   document.getElementById('btn-logout')?.addEventListener('click', async (e) => {
     e.preventDefault();
     const ok = await confirmModal({
@@ -771,7 +799,23 @@ export async function initAdminLayout({ activePage = 'dashboard', title = 'Admin
   // 5. Synchronisation temps réel des compteurs sidebar (Point 2.11)
   startRealtimeBadgeSync();
 
-  // 6. Gestion du menu latéral mobile
+  // 6. Sidebar rétractable
+  const sidebarEl = document.getElementById('admin-sidebar');
+  const collapseBtn = document.getElementById('sidebar-collapse-btn');
+  if (sidebarEl && collapseBtn) {
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (savedCollapsed) {
+      sidebarEl.classList.add('is-collapsed');
+      document.body.classList.add('sidebar-collapsed');
+    }
+    collapseBtn.addEventListener('click', () => {
+      sidebarEl.classList.toggle('is-collapsed');
+      document.body.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('sidebarCollapsed', sidebarEl.classList.contains('is-collapsed'));
+    });
+  }
+
+  // 7. Gestion du menu latéral mobile
   const sidebar = document.getElementById('admin-sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
   const toggleBtn = document.getElementById('sidebar-toggle-btn');
