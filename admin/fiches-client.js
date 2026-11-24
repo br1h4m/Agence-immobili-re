@@ -3,7 +3,7 @@
 
 import {
   initAdminLayout, adminIcon, formatDateTime, formatDate,
-  statusBadge, showToast, confirmModal, escapeHTML, printDocument, openCsvImportModal
+  statusBadge, showToast, confirmModal, escapeHTML, printDocument, openCsvImportModal, exportRecords
 } from '/admin/assets/js/admin.js';
 import {
   getFichesClient, getFicheClientById, updateFicheClientStatus, deleteFicheClient,
@@ -255,16 +255,24 @@ function renderBulkBar() {
   }
 
   container.innerHTML = `
-    <div class="bulk-actions-bar">
+    <div class="bulk-actions-bar is-visible">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="bulk-badge">${selectedFicheIds.size}</span>
         <span style="font-weight: 600;">dossier${selectedFicheIds.size > 1 ? 's' : ''} sélectionné${selectedFicheIds.size > 1 ? 's' : ''}</span>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
         <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-mark-read">
           ${adminIcon('check', { size: 14 })}
-          <span>Marquer comme lu (${selectedFicheIds.size})</span>
+          <span>Marquer lu (${selectedFicheIds.size})</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-csv">
+          ${adminIcon('download', { size: 14 })}
+          <span>CSV</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-excel">
+          ${adminIcon('download', { size: 14 })}
+          <span>Excel</span>
         </button>
         <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
           ${adminIcon('trash', { size: 14 })}
@@ -278,6 +286,28 @@ function renderBulkBar() {
     selectedFicheIds.clear();
     renderResults();
   });
+
+  const exportSelected = (format) => {
+    const selected = getFichesClient(currentFilters).filter((f) => selectedFicheIds.has(String(f.id)));
+    exportRecords({
+      filename: `fiches_client_immolode_${new Date().toISOString().slice(0, 10)}`,
+      format,
+      rows: selected,
+      columns: [
+        { label: 'Référence', key: 'reference' },
+        { label: 'Date', value: (r) => formatDateTime(r.createdAt) },
+        { label: 'Nom', key: 'nom' },
+        { label: 'Prénom', key: 'prenom' },
+        { label: 'Téléphone', key: 'telephone' },
+        { label: 'Email', key: 'email' },
+        { label: 'Opération', key: 'transaction' },
+        { label: 'Type de bien', key: 'typeBien' },
+        { label: 'Statut', key: 'status' }
+      ]
+    });
+  };
+  document.getElementById('btn-bulk-export-csv')?.addEventListener('click', () => exportSelected('csv'));
+  document.getElementById('btn-bulk-export-excel')?.addEventListener('click', () => exportSelected('excel'));
 
   document.getElementById('btn-bulk-mark-read')?.addEventListener('click', async () => {
     const ids = Array.from(selectedFicheIds);
@@ -483,13 +513,20 @@ function bindTableEvents(container) {
     });
   });
 
-  // Ligne de tableau cliquable
+  // Ligne de tableau cliquable (sélection en mode sélection, sinon ouverture dossier)
   container.querySelectorAll('tbody tr').forEach((tr) => {
     tr.addEventListener('click', (e) => {
       if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a') || e.target.closest('input[type="checkbox"]')) {
         return;
       }
-      openDrawer(tr.dataset.id);
+      const id = String(tr.dataset.id);
+      if (isSelectMode) {
+        if (selectedFicheIds.has(id)) selectedFicheIds.delete(id);
+        else selectedFicheIds.add(id);
+        renderResults();
+        return;
+      }
+      openDrawer(id);
     });
   });
 
@@ -548,6 +585,7 @@ function openDrawer(id) {
   // Marquer comme lu à l'ouverture
   markFicheRead(id, 1).then(() => {
     fiche.is_read = 1;
+    renderResults();
   });
 
   const drawer = document.getElementById('fiche-drawer');
@@ -634,11 +672,11 @@ function openDrawer(id) {
               </div>
               <div style="display: flex; gap: 8px;">
                 ${isImageDoc ? `
-                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Pièce d'identité — ${escapeHTML(`${fiche.nom || ''} ${fiche.prenom || ''}`)}">
+                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(docSrc)}" data-caption="Pièce d'identité — ${escapeHTML(`${fiche.nom || ''} ${fiche.prenom || ''}`)}">
                     ${adminIcon('eye', { size: 14 })} Agrandir
                   </button>
-                ` : (doc.dataUrl ? `
-                  <a href="${escapeHTML(doc.dataUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+                ` : (docSrc ? `
+                  <a href="${escapeHTML(docSrc)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
                     ${adminIcon('download', { size: 14 })} Télécharger
                   </a>
                 ` : `
@@ -722,27 +760,28 @@ function openDrawer(id) {
 
   // IMPRESSION PROFESSIONNELLE DÉDIÉE (Sans duplication, sans coupure d'écran)
   document.getElementById('drawer-btn-print')?.addEventListener('click', () => {
+    const fresh = getFicheClientById(id) || fiche;
     printDocument({
       title: 'Dossier officiel de constitution client',
-      type: `Fiche client (${fiche.transaction || 'Demande'})`,
-      reference: fiche.reference || `IML-DOS-${fiche.id}`,
-      date: formatDateTime(fiche.createdAt),
-      status: fiche.status,
+      type: `Fiche client (${fresh.transaction || 'Demande'})`,
+      reference: fresh.reference || `IML-DOS-${fresh.id}`,
+      date: formatDateTime(fresh.createdAt),
+      status: fresh.status,
       client: {
-        nom: `${fiche.nom || ''} ${fiche.prenom || ''}`.trim(),
-        telephone: fiche.telephone,
-        email: fiche.email
+        nom: `${fresh.nom || ''} ${fresh.prenom || ''}`.trim(),
+        telephone: fresh.telephone,
+        email: fresh.email
       },
       details: [
-        ['Numéro de dossier', fiche.reference || `IML-DOS-${fiche.id}`],
-        ['Nature de l\'opération', fiche.transaction || 'Demande'],
-        ['Type de bien recherché', fiche.typeBien || 'Appartement'],
+        ['Numéro de dossier', fresh.reference || `IML-DOS-${fresh.id}`],
+        ['Nature de l\'opération', fresh.transaction || 'Demande'],
+        ['Type de bien recherché', fresh.typeBien || 'Appartement'],
         ['Engagement d\'honoraires', 'Accepté et certifié électroniquement'],
-        ['Date de constitution', formatDateTime(fiche.createdAt)]
+        ['Date de constitution', formatDateTime(fresh.createdAt)]
       ],
       message: 'Le client certifie sur l\'honneur l\'exactitude des informations transmises pour la constitution de son dossier immobilier.',
-      signature: fiche.signature,
-      attachment: fiche.pieceIdentite
+      signature: fresh.signature,
+      attachment: fresh.pieceIdentite
     });
   });
 
@@ -785,7 +824,7 @@ function openLightbox(imgUrl, captionText) {
   if (lbCaption) {
     lbCaption.innerHTML = `
       <span>${escapeHTML(captionText || "Pièce d'identité officielle")}</span>
-      <a href="${escapeHTML(imgUrl)}" download class="btn btn-outline btn-sm" style="color:#FFF; border-color:rgba(255,255,255,0.4);">
+      <a href="${escapeHTML(imgUrl)}" download class="btn btn-sm" style="background: rgba(255,255,255,0.16); color:#FFF; border: 1px solid rgba(255,255,255,0.45);">
         ${adminIcon('download', { size: 14 })} Télécharger
       </a>
     `;

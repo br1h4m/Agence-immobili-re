@@ -12,16 +12,21 @@ export function initGallery(images = []) {
   const lightboxImage = qs('[data-lightbox-image]', root);
   let index = 0;
 
+  // Préchargement silencieux pour un changement instantané sans délai
+  images.forEach((src) => {
+    const pre = new Image();
+    pre.src = resizeImage(src, 1600);
+  });
+
   const update = (next, { fromLightbox = false } = {}) => {
     index = (next + images.length) % images.length;
+    const nextUrl = resizeImage(images[index], 1600);
     if (main) {
-      main.style.opacity = '0';
-      setTimeout(() => {
-        main.src = resizeImage(images[index], 1600);
-        main.style.opacity = '1';
-      }, 80);
+      main.src = nextUrl;
     }
-    if (lightboxImage && fromLightbox) lightboxImage.src = resizeImage(images[index], 2200);
+    if (lightboxImage && (fromLightbox || !lightbox?.hidden)) {
+      lightboxImage.src = resizeImage(images[index], 2200);
+    }
     if (counter) counter.textContent = `${index + 1} / ${images.length}`;
     thumbs.forEach((t, i) => t.classList.toggle('is-active', i === index));
   };

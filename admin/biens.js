@@ -1,7 +1,7 @@
 // admin/biens.js
 import {
   initAdminLayout, adminIcon, formatPrice, formatSurface, formatDate,
-  statusBadge, transactionBadge, showToast, confirmModal, escapeHTML, openCsvImportModal
+  statusBadge, transactionBadge, showToast, confirmModal, escapeHTML, openCsvImportModal, exportRecords
 } from '/admin/assets/js/admin.js';
 import {
   getProperties, deleteProperty, updatePropertyStatus, bulkDeleteProperties, syncWithBackend
@@ -204,13 +204,21 @@ function renderBulkBar() {
   }
 
   container.innerHTML = `
-    <div class="bulk-actions-bar">
+    <div class="bulk-actions-bar is-visible">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="bulk-badge">${selectedPropertyIds.size}</span>
         <span style="font-weight: 600;">bien${selectedPropertyIds.size > 1 ? 's' : ''} sélectionné${selectedPropertyIds.size > 1 ? 's' : ''}</span>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-csv">
+          ${adminIcon('download', { size: 14 })}
+          <span>CSV</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-excel">
+          ${adminIcon('download', { size: 14 })}
+          <span>Excel</span>
+        </button>
         <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
           ${adminIcon('trash', { size: 14 })}
           <span>Supprimer (${selectedPropertyIds.size})</span>
@@ -223,6 +231,29 @@ function renderBulkBar() {
     selectedPropertyIds.clear();
     renderResults();
   });
+
+  const exportSelected = (format) => {
+    const selected = getProperties(currentFilters).filter((p) => selectedPropertyIds.has(String(p.id)));
+    exportRecords({
+      filename: `biens_immolode_${new Date().toISOString().slice(0, 10)}`,
+      format,
+      rows: selected,
+      columns: [
+        { label: 'Référence', key: 'reference' },
+        { label: 'Titre', key: 'title' },
+        { label: 'Type', key: 'type' },
+        { label: 'Transaction', key: 'transaction' },
+        { label: 'Prix (DA)', key: 'price' },
+        { label: 'Wilaya', value: (r) => r.location?.wilaya || '' },
+        { label: 'Commune', value: (r) => r.location?.city || '' },
+        { label: 'Surface (m²)', key: 'surface' },
+        { label: 'Chambres', key: 'bedrooms' },
+        { label: 'Statut', key: 'status' }
+      ]
+    });
+  };
+  document.getElementById('btn-bulk-export-csv')?.addEventListener('click', () => exportSelected('csv'));
+  document.getElementById('btn-bulk-export-excel')?.addEventListener('click', () => exportSelected('excel'));
 
   document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
     const count = selectedPropertyIds.size;
@@ -377,6 +408,21 @@ function renderResults() {
       const id = e.target.dataset.id;
       if (e.target.checked) selectedPropertyIds.add(id);
       else selectedPropertyIds.delete(id);
+      renderResults();
+    });
+  });
+
+  // Clic sur ligne en mode sélection
+  container.querySelectorAll('tbody tr').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      if (!isSelectMode) return;
+      if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a') || e.target.closest('input[type="checkbox"]')) {
+        return;
+      }
+      const id = tr.dataset.propertyId;
+      if (!id) return;
+      if (selectedPropertyIds.has(id)) selectedPropertyIds.delete(id);
+      else selectedPropertyIds.add(id);
       renderResults();
     });
   });

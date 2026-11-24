@@ -11,9 +11,20 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/db.php';
 
+// Normalisation des alias de modèles (ex: 'biens' -> 'properties', 'utilisateurs' -> 'users')
+function normalize_import_model(string $m): string {
+    $m = strtolower(trim($m));
+    return match ($m) {
+        'biens', 'properties' => 'properties',
+        'utilisateurs', 'users' => 'users',
+        'fiches', 'fiches_client', 'fiches-client' => 'fiches_client',
+        default => $m,
+    };
+}
+
 // Si demande de modèle type en téléchargement
 if (isset($_GET['action']) && $_GET['action'] === 'template') {
-    $model = trim($_GET['model'] ?? 'properties');
+    $model = normalize_import_model($_GET['model'] ?? 'properties');
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="modele_' . $model . '.csv"');
     
@@ -47,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$model = trim($_POST['model'] ?? $_GET['model'] ?? 'properties');
+$model = normalize_import_model($_POST['model'] ?? $_GET['model'] ?? 'properties');
 $csvContent = '';
 
 if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {

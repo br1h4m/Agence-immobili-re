@@ -4,8 +4,14 @@
 import { adminIcon, escapeHTML } from '/admin/assets/js/admin.js';
 import { getCurrentUser } from '/admin/includes/auth.js';
 
-export function Topbar({ title = 'Administration', breadcrumbs = [], action = null } = {}) {
+export function Topbar({ activePage = 'dashboard', title = 'Administration', breadcrumbs = [], action = null } = {}) {
   const user = getCurrentUser() || { nom: 'Administrateur' };
+
+  const backBtnHtml = activePage !== 'dashboard'
+    ? `<button type="button" class="topbar-back-btn" id="topbar-back-btn" title="Retour à la page précédente" aria-label="Retour">
+        ${adminIcon('arrow-left', { size: 17 })}
+       </button>`
+    : '';
 
   const breadcrumbsHtml = breadcrumbs.length
     ? `<nav class="admin-breadcrumbs" aria-label="Fil d'Ariane">
@@ -41,6 +47,7 @@ export function Topbar({ title = 'Administration', breadcrumbs = [], action = nu
         <button type="button" class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Ouvrir le menu">
           ${adminIcon('menu', { size: 22 })}
         </button>
+        ${backBtnHtml}
         <div class="topbar-titles">
           ${breadcrumbsHtml}
           <h1 class="topbar-title">${escapeHTML(title)}</h1>
@@ -49,12 +56,6 @@ export function Topbar({ title = 'Administration', breadcrumbs = [], action = nu
 
       <div class="topbar-right">
         ${actionHtml}
-
-        <!-- Bouton bascule de thème clair/sombre -->
-        <button type="button" class="btn-icon" id="btn-theme-toggle" title="Basculer entre thème clair et sombre" aria-label="Changer de thème" style="padding: 6px; border-radius: var(--radius-xs); border: 1px solid var(--admin-border); background: var(--admin-surface); color: var(--admin-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-          <span class="theme-icon-light">${adminIcon('sun', { size: 18 })}</span>
-          <span class="theme-icon-dark" style="display:none;">${adminIcon('moon', { size: 18 })}</span>
-        </button>
 
         <!-- Menu utilisateur avec dropdown -->
         <div class="topbar-user-menu" id="topbar-user-menu">
@@ -65,10 +66,17 @@ export function Topbar({ title = 'Administration', breadcrumbs = [], action = nu
             <span class="topbar-avatar-initials" style="${user.avatar ? 'display:none' : 'display:flex'}">${escapeHTML(initials)}</span>
           </div>
           <div class="topbar-dropdown" id="topbar-dropdown" style="display:none">
+            <div style="padding: 10px 16px; border-bottom: 1px solid var(--admin-border-subtle); font-size: 0.8rem;">
+              <strong style="display:block; color: var(--admin-text);">${escapeHTML(user.nom || 'Admin')}</strong>
+              <span style="color: var(--admin-text-muted);">${escapeHTML(user.role || 'Administrateur')}</span>
+            </div>
             <div class="topbar-dropdown-item" id="topbar-menu-profile">
               ${adminIcon('user', { size: 16 })} Mon Profil
             </div>
-            <div class="topbar-dropdown-item" id="topbar-menu-logout">
+            <a href="/admin/parametres" class="topbar-dropdown-item">
+              ${adminIcon('settings', { size: 16 })} Paramètres
+            </a>
+            <div class="topbar-dropdown-item" id="topbar-menu-logout" style="color: var(--admin-danger);">
               ${adminIcon('logout', { size: 16 })} Déconnexion
             </div>
           </div>

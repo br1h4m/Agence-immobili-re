@@ -318,6 +318,7 @@ export function getDemandes({ type = '', status = '', search = '' } = {}) {
     signature: f.signature,
     engagementAccepte: f.engagementAccepte,
     isFicheClient: true,
+    is_read: f.is_read ?? 0,
     status: f.status || 'Nouveau',
     createdAt: f.createdAt
   }));
@@ -398,7 +399,7 @@ export function deleteDemande(id) {
     writeStorage(KEY_FICHES_CLIENT, fichesFiltered);
     changed = true;
     try {
-      fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+      fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then(() => triggerBadgeSync()).catch(() => {});
     } catch (_) {}
   }
 
@@ -408,7 +409,7 @@ export function deleteDemande(id) {
     writeStorage(KEY_DEMANDES, demandesFiltered);
     changed = true;
     try {
-      fetch(`/api/demandes.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+      fetch(`/api/demandes.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then(() => triggerBadgeSync()).catch(() => {});
     } catch (_) {}
   }
 
@@ -513,7 +514,7 @@ export function deleteFicheClient(id) {
   writeStorage(KEY_FICHES_CLIENT, filtered);
 
   try {
-    fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`/api/fiches-client.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then(() => triggerBadgeSync()).catch(() => {});
   } catch (_) {}
 
   return filtered.length !== list.length;
@@ -669,6 +670,12 @@ export function getDashboardStats() {
    Opérations multiples (Bulk) & Gestion de la lecture (is_read)
    ========================================================================== */
 
+function triggerBadgeSync() {
+  if (typeof window !== 'undefined' && typeof window._syncBadgesNow === 'function') {
+    window._syncBadgesNow();
+  }
+}
+
 export async function bulkDeleteProperties(ids = []) {
   if (!ids.length) return false;
   const strIds = ids.map(String);
@@ -709,6 +716,7 @@ export async function bulkDeleteDemandes(ids = []) {
         body: JSON.stringify({ action: 'bulk_delete', ids })
       }).catch(() => {})
     ]);
+    triggerBadgeSync();
     return true;
   } catch (_) {
     return false;
@@ -728,6 +736,7 @@ export async function bulkDeleteFichesClient(ids = []) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'bulk_delete', ids })
     });
+    triggerBadgeSync();
     return res.ok;
   } catch (_) {
     return false;
@@ -768,13 +777,28 @@ export async function markDemandeRead(id, is_read = 1) {
     writeStorage(KEY_FICHES_CLIENT, fiches);
   }
 
-  try {
-    await fetch('/api/demandes.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'mark_read', id, is_read })
-    });
-  } catch (_) {}
+  const apiAction = is_read ? 'mark_read' : 'mark_unread';
+  const requests = [];
+  if (target || !targetFiche) {
+    requests.push(
+      fetch('/api/demandes.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: apiAction, id, is_read })
+      }).catch(() => {})
+    );
+  }
+  if (targetFiche) {
+    requests.push(
+      fetch('/api/fiches-client.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: apiAction, id, is_read })
+      }).catch(() => {})
+    );
+  }
+  await Promise.all(requests);
+  triggerBadgeSync();
 }
 
 export async function bulkMarkDemandesRead(ids = [], is_read = 1) {
@@ -786,12 +810,26 @@ export async function bulkMarkDemandesRead(ids = [], is_read = 1) {
   });
   writeStorage(KEY_DEMANDES, demandes);
 
+  const fiches = readStorage(KEY_FICHES_CLIENT, INITIAL_FICHES_CLIENT);
+  fiches.forEach((f) => {
+    if (strIds.includes(String(f.id))) f.is_read = is_read;
+  });
+  writeStorage(KEY_FICHES_CLIENT, fiches);
+
   try {
-    await fetch('/api/demandes.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
-    });
+    await Promise.all([
+      fetch('/api/demandes.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
+      }).catch(() => {}),
+      fetch('/api/fiches-client.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
+      }).catch(() => {})
+    ]);
+    triggerBadgeSync();
     return true;
   } catch (_) {
     return false;
@@ -810,8 +848,9 @@ export async function markFicheRead(id, is_read = 1) {
     await fetch('/api/fiches-client.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'mark_read', id, is_read })
+      body: JSON.stringify({ action: is_read ? 'mark_read' : 'mark_unread', id, is_read })
     });
+    triggerBadgeSync();
   } catch (_) {}
 }
 
@@ -830,6 +869,7 @@ export async function bulkMarkFichesRead(ids = [], is_read = 1) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'bulk_mark_read', ids, is_read })
     });
+    triggerBadgeSync();
     return true;
   } catch (_) {
     return false;

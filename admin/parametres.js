@@ -2,7 +2,7 @@
 // MODULE ES NAVIGATEUR — gestion des paramètres généraux & CMS de l'agence Imolode.
 
 import {
-  initAdminLayout, adminIcon, showToast, escapeHTML
+  initAdminLayout, adminIcon, showToast, escapeHTML, toggleTheme
 } from '/admin/assets/js/admin.js';
 import {
   getSettings, saveSettings
@@ -124,6 +124,27 @@ async function init() {
                 <label class="form-label" for="setting-instagram">Lien page Instagram</label>
                 <input type="url" class="form-input" id="setting-instagram" value="${escapeHTML(s.instagram || 'https://instagram.com/immolode')}">
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <h3 class="card-title">Apparence de l'administration</h3>
+            <p class="card-subtitle">Préférence d'affichage de l'interface (sauvegardée sur cet appareil)</p>
+          </div>
+          <div class="card-body">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+              <div>
+                <strong style="display: block; font-size: 0.92rem;">Thème visuel</strong>
+                <span style="font-size: 0.82rem; color: var(--admin-text-muted);" id="settings-theme-status">
+                  Mode actuel : ${document.documentElement.getAttribute('data-theme') === 'dark' ? 'Sombre' : 'Clair'}
+                </span>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-settings-theme-toggle">
+                ${adminIcon(document.documentElement.getAttribute('data-theme') === 'dark' ? 'sun' : 'moon', { size: 15 })}
+                <span>Basculer en mode ${document.documentElement.getAttribute('data-theme') === 'dark' ? 'clair' : 'sombre'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -260,6 +281,16 @@ async function init() {
   aboutInput?.addEventListener('input', (e) => {
     const preview = document.getElementById('preview-about-image');
     if (preview && e.target.value.trim()) preview.src = e.target.value.trim();
+  });
+
+  // Bascule thème clair / sombre depuis Paramètres
+  document.getElementById('btn-settings-theme-toggle')?.addEventListener('click', () => {
+    toggleTheme();
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const status = document.getElementById('settings-theme-status');
+    const btn = document.getElementById('btn-settings-theme-toggle');
+    if (status) status.textContent = `Mode actuel : ${isDark ? 'Sombre' : 'Clair'}`;
+    if (btn) btn.innerHTML = `${adminIcon(isDark ? 'sun' : 'moon', { size: 15 })} <span>Basculer en mode ${isDark ? 'clair' : 'sombre'}</span>`;
   });
 
   // Soumission du formulaire

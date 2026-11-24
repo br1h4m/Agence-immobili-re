@@ -25,6 +25,22 @@ $input = json_decode($rawInput, true) ?: $_POST;
 
 $currentUserId = (int)($_SERVER['HTTP_X_USER_ID'] ?? $input['current_user_id'] ?? $_GET['current_user_id'] ?? 0);
 
+function validate_user_fields(string $nom, string $email, string $tel): ?string {
+    if ($nom === '' || $email === '') {
+        return 'Nom et adresse e-mail obligatoires';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 'Format d\'adresse e-mail invalide';
+    }
+    if ($tel !== '') {
+        $cleaned = preg_replace('/[\s.\-()]/', '', $tel);
+        if (!preg_match('/^(?:0[5-7]\d{8}|(?:\+213|00213)[5-7]\d{8}|0[2-4]\d{7})$/', $cleaned)) {
+            return 'Numéro de téléphone algérien invalide (ex: 0550123456 ou +213550123456)';
+        }
+    }
+    return null;
+}
+
 try {
     switch ($method) {
         // --------------------------------------------------------------------
@@ -74,9 +90,9 @@ try {
                 $tel = trim($input['telephone'] ?? $input['phone'] ?? '');
                 $avatar = isset($input['avatar']) ? trim((string)$input['avatar']) : null;
 
-                if (empty($nom) || empty($email)) {
+                if ($err = validate_user_fields($nom, $email, $tel)) {
                     http_response_code(422);
-                    echo json_encode(['success' => false, 'error' => 'Nom et email obligatoires']);
+                    echo json_encode(['success' => false, 'error' => $err]);
                     exit;
                 }
 
@@ -148,6 +164,12 @@ try {
                 $actif = isset($input['actif']) ? (int)$input['actif'] : 1;
                 $avatar = isset($input['avatar']) ? trim((string)$input['avatar']) : null;
 
+                if ($err = validate_user_fields($nom, $email, $tel)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'error' => $err]);
+                    exit;
+                }
+
                 if (!empty($input['password'])) {
                     $hash = password_hash($input['password'], PASSWORD_BCRYPT);
                     $stmt = $conn->prepare("UPDATE `utilisateurs` SET `nom` = ?, `email` = ?, `mot_de_passe` = ?, `role` = ?, `poste` = ?, `telephone` = ?, `actif` = ?, `avatar` = ? WHERE `id` = ?");
@@ -171,9 +193,9 @@ try {
             $tel   = trim($input['telephone'] ?? $input['phone'] ?? '');
             $avatar = isset($input['avatar']) ? trim((string)$input['avatar']) : null;
 
-            if (empty($nom) || empty($email)) {
+            if ($err = validate_user_fields($nom, $email, $tel)) {
                 http_response_code(422);
-                echo json_encode(['success' => false, 'error' => 'Nom et email obligatoires']);
+                echo json_encode(['success' => false, 'error' => $err]);
                 exit;
             }
 

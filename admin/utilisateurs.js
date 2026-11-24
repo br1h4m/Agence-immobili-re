@@ -2,7 +2,7 @@
 // MODULE ES NAVIGATEUR — gestion des utilisateurs et conseillers de l'agence Imolode.
 
 import {
-  initAdminLayout, adminIcon, showToast, confirmModal, escapeHTML, openCsvImportModal
+  initAdminLayout, adminIcon, showToast, confirmModal, escapeHTML, openCsvImportModal, exportRecords
 } from '/admin/assets/js/admin.js';
 import {
   getUsers, saveUser, deleteUser, bulkDeleteUsers
@@ -96,13 +96,21 @@ function renderBulkBar() {
   }
 
   container.innerHTML = `
-    <div class="bulk-actions-bar">
+    <div class="bulk-actions-bar is-visible">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="bulk-badge">${selectedUserIds.size}</span>
         <span style="font-weight: 600;">membre${selectedUserIds.size > 1 ? 's' : ''} sélectionné${selectedUserIds.size > 1 ? 's' : ''}</span>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-csv">
+          ${adminIcon('download', { size: 14 })}
+          <span>CSV</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-excel">
+          ${adminIcon('download', { size: 14 })}
+          <span>Excel</span>
+        </button>
         <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
           ${adminIcon('trash', { size: 14 })}
           <span>Supprimer (${selectedUserIds.size})</span>
@@ -115,6 +123,26 @@ function renderBulkBar() {
     selectedUserIds.clear();
     renderUsers();
   });
+
+  const exportSelected = (format) => {
+    const selected = getUsers().filter((u) => selectedUserIds.has(String(u.id)));
+    exportRecords({
+      filename: `membres_immolode_${new Date().toISOString().slice(0, 10)}`,
+      format,
+      rows: selected,
+      columns: [
+        { label: 'ID', key: 'id' },
+        { label: 'Nom', key: 'nom' },
+        { label: 'Poste', key: 'poste' },
+        { label: 'Email', key: 'email' },
+        { label: 'Téléphone', key: 'phone' },
+        { label: 'Rôle', key: 'role' },
+        { label: 'Actif', value: (r) => (r.actif !== false ? 'Oui' : 'Non') }
+      ]
+    });
+  };
+  document.getElementById('btn-bulk-export-csv')?.addEventListener('click', () => exportSelected('csv'));
+  document.getElementById('btn-bulk-export-excel')?.addEventListener('click', () => exportSelected('excel'));
 
   document.getElementById('btn-bulk-delete')?.addEventListener('click', async () => {
     const count = selectedUserIds.size;
@@ -306,6 +334,22 @@ function bindTableEvents(container) {
     });
   });
 
+  // Clic sur ligne en mode sélection
+  container.querySelectorAll('tbody tr').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      if (!isSelectMode) return;
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input[type="checkbox"]')) {
+        return;
+      }
+      const cb = tr.querySelector('.user-row-checkbox');
+      if (!cb || cb.disabled) return;
+      const id = String(cb.dataset.id);
+      if (selectedUserIds.has(id)) selectedUserIds.delete(id);
+      else selectedUserIds.add(id);
+      renderUsers();
+    });
+  });
+
   // Éditer
   container.querySelectorAll('.btn-edit-user').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -361,7 +405,7 @@ function openUserDrawer(id = null) {
       </button>
     </div>
 
-    <form id="form-user-drawer" style="display: flex; flex-direction: column; flex: 1;">
+    <form id="form-user-drawer" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;" novalidate>
       <div class="drawer-body">
         <div class="form-section">
           <!-- Photo / Avatar -->
@@ -397,11 +441,13 @@ function openUserDrawer(id = null) {
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-email">Adresse e-mail <span class="required">*</span></label>
             <input type="email" class="form-input" id="user-input-email" required value="${escapeHTML(user?.email || '')}" placeholder="conseiller@immolode.dz">
+            <span class="form-error-msg" id="err-user-email" style="display:none;"></span>
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="user-input-phone">Numéro de téléphone</label>
-            <input type="text" class="form-input" id="user-input-phone" value="${escapeHTML(user?.phone || '')}" placeholder="0661.56.03.85">
+            <input type="text" class="form-input" id="user-input-phone" value="${escapeHTML(user?.phone || '')}" placeholder="0550 12 34 56">
+            <span class="form-error-msg" id="err-user-phone" style="display:none;"></span>
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
@@ -457,6 +503,7 @@ function openUserDrawer(id = null) {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
+    fd.append('folder', 'avatars');
     try {
       const res = await fetch('/api/upload.php', { method: 'POST', body: fd });
       const data = await res.json();
@@ -482,15 +529,49 @@ function openUserDrawer(id = null) {
     e.preventDefault();
     const nom = document.getElementById('user-input-nom')?.value.trim();
     const poste = document.getElementById('user-input-poste')?.value.trim();
-    const email = document.getElementById('user-input-email')?.value.trim();
-    const phone = document.getElementById('user-input-phone')?.value.trim();
+    const emailEl = document.getElementById('user-input-email');
+    const phoneEl = document.getElementById('user-input-phone');
+    const errEmail = document.getElementById('err-user-email');
+    const errPhone = document.getElementById('err-user-phone');
+    const email = emailEl?.value.trim() || '';
+    const phone = phoneEl?.value.trim() || '';
     const role = document.getElementById('user-input-role')?.value;
     const actif = document.getElementById('user-input-actif')?.checked;
     const avatar = document.getElementById('user-input-avatar')?.value.trim();
 
+    if (errEmail) errEmail.style.display = 'none';
+    if (errPhone) errPhone.style.display = 'none';
+    emailEl?.classList.remove('is-invalid');
+    phoneEl?.classList.remove('is-invalid');
+
     if (!nom || !email) {
-      showToast('Le nom et l\'email sont obligatoires', 'error');
+      showToast('Le nom et l\'adresse e-mail sont obligatoires', 'error');
       return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      if (errEmail) {
+        errEmail.textContent = 'Format d\'adresse e-mail invalide.';
+        errEmail.style.display = 'block';
+      }
+      emailEl?.classList.add('is-invalid');
+      showToast('Adresse e-mail invalide', 'error');
+      return;
+    }
+
+    if (phone) {
+      const cleanedPhone = phone.replace(/[\s.\-()]/g, '');
+      const dzPhoneRegex = /^(?:0[5-7]\d{8}|(?:\+213|00213)[5-7]\d{8}|0[2-4]\d{7})$/;
+      if (!dzPhoneRegex.test(cleanedPhone)) {
+        if (errPhone) {
+          errPhone.textContent = 'Numéro algérien invalide (ex: 0550 12 34 56 ou +213 550 12 34 56).';
+          errPhone.style.display = 'block';
+        }
+        phoneEl?.classList.add('is-invalid');
+        showToast('Numéro de téléphone invalide', 'error');
+        return;
+      }
     }
 
     const userData = {

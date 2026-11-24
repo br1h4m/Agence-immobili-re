@@ -1073,6 +1073,8 @@ button, input, select, textarea {
   padding: 28px;
   max-width: 520px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: var(--shadow-lg);
   transform: translateY(12px) scale(0.98);
   transition: transform var(--transition-fast);
@@ -1516,13 +1518,16 @@ button, input, select, textarea {
   transform: translateX(-50%) translateY(100px);
   background: var(--admin-sidebar-bg);
   color: var(--admin-sidebar-text);
+  border: 1px solid rgba(181, 154, 106, 0.35);
   padding: 12px 20px;
   border-radius: var(--radius-md);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
-  gap: 16px;
-  z-index: 100;
+  flex-wrap: wrap;
+  gap: 14px;
+  z-index: 120;
+  max-width: calc(100vw - 32px);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
   opacity: 0;
   pointer-events: none;
@@ -1534,6 +1539,18 @@ button, input, select, textarea {
   pointer-events: auto;
 }
 
+.bulk-actions-bar .btn-outline {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.bulk-actions-bar .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--admin-gold);
+  color: #FFFFFF;
+}
+
+.bulk-badge,
 .bulk-count-badge {
   background: var(--admin-gold);
   color: #1A1A18;
@@ -1541,6 +1558,41 @@ button, input, select, textarea {
   font-size: 0.8rem;
   padding: 3px 9px;
   border-radius: 12px;
+}
+
+.admin-drawer form {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.topbar-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface-alt);
+  color: var(--admin-text);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.topbar-back-btn:hover {
+  background: var(--admin-gold-soft);
+  border-color: var(--admin-gold);
+  color: var(--admin-gold);
+}
+
+.form-error-msg {
+  font-size: 0.78rem;
+  color: var(--admin-danger);
+  margin-top: 2px;
+  font-weight: 500;
+}
+.form-input.is-invalid {
+  border-color: var(--admin-danger);
 }
 
 /* Surbrillance animée de ligne ciblée (Point 2.14) */

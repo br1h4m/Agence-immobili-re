@@ -26,7 +26,9 @@ $maxPrice    = isset($_GET['maxPrice']) && $_GET['maxPrice'] !== '' ? (float)$_G
 $minSurface  = isset($_GET['minSurface']) && $_GET['minSurface'] !== '' ? (float)$_GET['minSurface'] : null;
 $maxSurface  = isset($_GET['maxSurface']) && $_GET['maxSurface'] !== '' ? (float)$_GET['maxSurface'] : null;
 $bedrooms    = isset($_GET['bedrooms']) && $_GET['bedrooms'] !== '' ? (int)$_GET['bedrooms'] : null;
+$bathrooms   = isset($_GET['bathrooms']) && $_GET['bathrooms'] !== '' ? (int)$_GET['bathrooms'] : null;
 $sort        = trim($_GET['sort'] ?? 'recent');
+$hasSecondaryFilters = ($q !== '' || $bedrooms !== null || $bathrooms !== null);
 
 // ----------------------------------------------------------------------------
 // 2. Construction de la requête SQL préparée (MySQLi)
@@ -105,6 +107,13 @@ if ($bedrooms !== null && $bedrooms > 0) {
     $conditions[] = "`chambres` >= ?";
     $types .= "i";
     $params[] = $bedrooms;
+}
+
+// Filtre nombre de salles de bain
+if ($bathrooms !== null && $bathrooms > 0) {
+    $conditions[] = "`salles_de_bain` >= ?";
+    $types .= "i";
+    $params[] = $bathrooms;
 }
 
 // Ordre de tri
@@ -292,15 +301,7 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
 
             <form class="filters-form" method="GET" action="/client/biens.php">
               <fieldset class="filter-group">
-                <legend>Recherche rapide</legend>
-                <label class="filter-field">
-                  <span>Mot-clé ou quartier</span>
-                  <input type="text" name="q" placeholder="Ex: vue mer, meublé..." value="<?= e($q) ?>">
-                </label>
-              </fieldset>
-
-              <fieldset class="filter-group">
-                <legend>Transaction</legend>
+                <legend>Type de transaction</legend>
                 <div class="filter-toggle" role="radiogroup" aria-label="Type de transaction">
                   <label>
                     <input type="radio" name="transaction" value="" <?= empty($transaction) ? 'checked' : '' ?>>
@@ -328,7 +329,7 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
               </fieldset>
 
               <fieldset class="filter-group">
-                <legend>Localisation</legend>
+                <legend>Wilaya &amp; Quartier</legend>
                 <label class="filter-field">
                   <span>Wilaya</span>
                   <select name="wilaya">
@@ -340,9 +341,9 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
                 </label>
 
                 <label class="filter-field" style="margin-top:8px">
-                  <span>Ville / Commune</span>
+                  <span>Commune / Quartier</span>
                   <select name="city">
-                    <option value="">Toutes les villes</option>
+                    <option value="">Toutes les communes</option>
                     <?php foreach ($available_communes as $c): ?>
                       <option value="<?= e($c) ?>" <?= $city === $c ? 'selected' : '' ?>><?= e($c) ?></option>
                     <?php endforeach; ?>
@@ -351,32 +352,57 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
               </fieldset>
 
               <fieldset class="filter-group">
-                <legend>Prix (DA)</legend>
+                <legend>Fourchette de prix (DA)</legend>
                 <div class="filter-range">
-                  <input type="number" name="minPrice" min="0" placeholder="Min" value="<?= $minPrice !== null ? $minPrice : '' ?>">
-                  <input type="number" name="maxPrice" min="0" placeholder="Max" value="<?= $maxPrice !== null ? $maxPrice : '' ?>">
+                  <input type="number" name="minPrice" min="0" placeholder="Prix min" value="<?= $minPrice !== null ? $minPrice : '' ?>">
+                  <input type="number" name="maxPrice" min="0" placeholder="Prix max" value="<?= $maxPrice !== null ? $maxPrice : '' ?>">
                 </div>
               </fieldset>
 
               <fieldset class="filter-group">
                 <legend>Surface (m²)</legend>
                 <div class="filter-range">
-                  <input type="number" name="minSurface" min="0" placeholder="Min" value="<?= $minSurface !== null ? $minSurface : '' ?>">
-                  <input type="number" name="maxSurface" min="0" placeholder="Max" value="<?= $maxSurface !== null ? $maxSurface : '' ?>">
+                  <input type="number" name="minSurface" min="0" placeholder="Min (m²)" value="<?= $minSurface !== null ? $minSurface : '' ?>">
+                  <input type="number" name="maxSurface" min="0" placeholder="Max (m²)" value="<?= $maxSurface !== null ? $maxSurface : '' ?>">
                 </div>
               </fieldset>
 
-              <fieldset class="filter-group">
-                <legend>Chambres minimum</legend>
-                <select name="bedrooms">
-                  <option value="">Toutes</option>
-                  <option value="1" <?= $bedrooms === 1 ? 'selected' : '' ?>>1+</option>
-                  <option value="2" <?= $bedrooms === 2 ? 'selected' : '' ?>>2+</option>
-                  <option value="3" <?= $bedrooms === 3 ? 'selected' : '' ?>>3+</option>
-                  <option value="4" <?= $bedrooms === 4 ? 'selected' : '' ?>>4+</option>
-                  <option value="5" <?= $bedrooms === 5 ? 'selected' : '' ?>>5+</option>
-                </select>
-              </fieldset>
+              <!-- Critères secondaires repliables -->
+              <div class="filter-group">
+                <button type="button" class="filter-more-toggle" id="btn-more-filters" aria-expanded="<?= $hasSecondaryFilters ? 'true' : 'false' ?>" aria-controls="filter-more-panel">
+                  <span>Plus de critères (chambres, mots-clés...)</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+
+                <div class="filter-more-panel" id="filter-more-panel" <?= $hasSecondaryFilters ? '' : 'hidden' ?>>
+                  <fieldset class="filter-group">
+                    <legend>Mot-clé ou référence</legend>
+                    <input type="text" name="q" placeholder="Ex: vue mer, meublé, piscine..." value="<?= e($q) ?>">
+                  </fieldset>
+
+                  <fieldset class="filter-group">
+                    <legend>Chambres minimum</legend>
+                    <select name="bedrooms">
+                      <option value="">Indifférent</option>
+                      <option value="1" <?= $bedrooms === 1 ? 'selected' : '' ?>>1+ chambre</option>
+                      <option value="2" <?= $bedrooms === 2 ? 'selected' : '' ?>>2+ chambres</option>
+                      <option value="3" <?= $bedrooms === 3 ? 'selected' : '' ?>>3+ chambres</option>
+                      <option value="4" <?= $bedrooms === 4 ? 'selected' : '' ?>>4+ chambres</option>
+                      <option value="5" <?= $bedrooms === 5 ? 'selected' : '' ?>>5+ chambres</option>
+                    </select>
+                  </fieldset>
+
+                  <fieldset class="filter-group">
+                    <legend>Salles de bain minimum</legend>
+                    <select name="bathrooms">
+                      <option value="">Indifférent</option>
+                      <option value="1" <?= $bathrooms === 1 ? 'selected' : '' ?>>1+ salle de bain</option>
+                      <option value="2" <?= $bathrooms === 2 ? 'selected' : '' ?>>2+ salles de bain</option>
+                      <option value="3" <?= $bathrooms === 3 ? 'selected' : '' ?>>3+ salles de bain</option>
+                    </select>
+                  </fieldset>
+                </div>
+              </div>
 
               <div class="filters-actions" style="display: flex; gap: 8px;">
                 <a href="/client/biens.php" class="btn btn-outline" style="text-align:center; flex: 1; border-color: #A09A8F; color: var(--color-text);">Réinitialiser</a>
@@ -401,10 +427,13 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
                 <input type="hidden" name="city" value="<?= e($city) ?>">
                 <?php if ($minPrice): ?><input type="hidden" name="minPrice" value="<?= $minPrice ?>"><?php endif; ?>
                 <?php if ($maxPrice): ?><input type="hidden" name="maxPrice" value="<?= $maxPrice ?>"><?php endif; ?>
+                <?php if ($minSurface): ?><input type="hidden" name="minSurface" value="<?= $minSurface ?>"><?php endif; ?>
+                <?php if ($maxSurface): ?><input type="hidden" name="maxSurface" value="<?= $maxSurface ?>"><?php endif; ?>
                 <?php if ($bedrooms): ?><input type="hidden" name="bedrooms" value="<?= $bedrooms ?>"><?php endif; ?>
+                <?php if ($bathrooms): ?><input type="hidden" name="bathrooms" value="<?= $bathrooms ?>"><?php endif; ?>
 
                 <label for="properties-sort" class="text-muted" style="margin:0;">Trier par :</label>
-                <select id="properties-sort" name="sort" style="width:auto;padding:6px 12px;" onchange="this.form.submit()">
+                <select id="properties-sort" name="sort" style="width:auto;padding:8px 36px 8px 12px;cursor:pointer;" onchange="this.form.submit()">
                   <option value="recent" <?= $sort === 'recent' ? 'selected' : '' ?>>Plus récents</option>
                   <option value="price-asc" <?= $sort === 'price-asc' ? 'selected' : '' ?>>Prix croissant</option>
                   <option value="price-desc" <?= $sort === 'price-desc' ? 'selected' : '' ?>>Prix décroissant</option>
@@ -465,6 +494,16 @@ if (!empty($wilaya) && isset($communes_by_wilaya[$wilaya])) {
       }
       if (closeBtn && aside) {
         closeBtn.addEventListener('click', function() { aside.classList.remove('is-open'); });
+      }
+      // Toggle critères secondaires ("Plus de critères")
+      var moreBtn = document.getElementById('btn-more-filters');
+      var morePanel = document.getElementById('filter-more-panel');
+      if (moreBtn && morePanel) {
+        moreBtn.addEventListener('click', function() {
+          var isHidden = morePanel.hidden;
+          morePanel.hidden = !isHidden;
+          moreBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        });
       }
       // Liaison dynamique Wilaya -> Communes
       var communesData = <?= json_encode($communes_by_wilaya, JSON_UNESCAPED_UNICODE) ?>;

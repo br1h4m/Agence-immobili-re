@@ -247,13 +247,15 @@ export function printDocument({
     </div>
   ` : '';
 
+  const attSrc = attachment ? (attachment.dataUrl || (attachment.name ? '/uploads/documents/' + attachment.name : '')) : '';
+  const attIsPdf = (attachment?.name || '').toLowerCase().endsWith('.pdf');
   const attachmentHtml = attachment ? `
     <div class="print-section" style="margin-top: 18px; page-break-inside: avoid;">
       <h3 class="print-section-title">Justificatif d'identité</h3>
       <p style="font-size: 9.5pt; color: #555; margin: 4px 0;">Fichier joint : <strong>${escapeHTML(attachment.name || 'Pièce d\'identité')}</strong></p>
-      ${attachment.dataUrl && String(attachment.dataUrl).startsWith('http') ? `
+      ${attSrc && !attIsPdf ? `
         <div style="margin-top: 6px; border: 1px solid #D6D2CA; padding: 4px; display: inline-block;">
-          <img src="${escapeHTML(attachment.dataUrl)}" alt="Pièce jointe" style="max-height: 160px; max-width: 300px; display: block;">
+          <img src="${escapeHTML(attSrc)}" alt="Pièce jointe" style="max-height: 160px; max-width: 300px; display: block;">
         </div>
       ` : ''}
     </div>
@@ -582,6 +584,86 @@ export async function openProfileModal() {
 }
 
 /* ==========================================================================
+   Exportation CSV / Excel (SheetJS + Fallback UTF-8)
+   ========================================================================== */
+
+let sheetJsPromise = null;
+function loadSheetJS() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (sheetJsPromise) return sheetJsPromise;
+  sheetJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error('Impossible de charger le module Excel.'));
+    document.head.appendChild(s);
+  });
+  return sheetJsPromise;
+}
+
+export async function exportRecords({ filename = 'export', columns = [], rows = [], format = 'csv' } = {}) {
+  if (!rows.length) {
+    showToast('Aucune ligne sélectionnée à exporter.', 'error');
+    return;
+  }
+
+  const headers = columns.map((c) => c.label);
+  const matrix = rows.map((row) =>
+    columns.map((c) => {
+      const val = typeof c.value === 'function' ? c.value(row) : row[c.key];
+      return val === null || val === undefined ? '' : String(val);
+    })
+  );
+
+  if (format === 'excel') {
+    try {
+      const XLSX = await loadSheetJS();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...matrix]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Export');
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+      showToast(`Export Excel (${rows.length} ligne${rows.length > 1 ? 's' : ''}) téléchargé`);
+      return;
+    } catch (_) {
+      // Fallback HTML Spreadsheet compatible Excel (.xls UTF-8)
+      const tableHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="UTF-8"></head>
+        <body><table>
+          <thead><tr>${headers.map((h) => `<th>${escapeHTML(h)}</th>`).join('')}</tr></thead>
+          <tbody>${matrix.map((r) => `<tr>${r.map((cell) => `<td>${escapeHTML(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></body></html>
+      `;
+      const blob = new Blob(['\uFEFF' + tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      triggerDownload(blob, `${filename}.xls`);
+      showToast(`Export Excel (${rows.length} ligne${rows.length > 1 ? 's' : ''}) téléchargé`);
+      return;
+    }
+  }
+
+  // Format CSV standard UTF-8 (séparateur ;)
+  const csvLines = [headers, ...matrix].map((r) =>
+    r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';')
+  );
+  const blob = new Blob(['\uFEFF' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  triggerDownload(blob, `${filename}.csv`);
+  showToast(`Export CSV (${rows.length} ligne${rows.length > 1 ? 's' : ''}) téléchargé`);
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 150);
+}
+
+/* ==========================================================================
    Modale d'Importation CSV / Excel (Point 2.2)
    ========================================================================== */
 
@@ -619,12 +701,12 @@ export function openCsvImportModal({ model = 'properties', title = 'Importer des
 
       <form id="import-form">
         <div style="border: 2px dashed var(--admin-border); border-radius: var(--radius-md); padding: 24px; text-align: center; margin-bottom: 20px; background: var(--admin-surface); cursor: pointer;" id="import-dropzone">
-          <input type="file" id="import-file-input" accept=".csv, text/csv, application/vnd.ms-excel" style="display:none;">
+          <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
           <div style="color: var(--admin-primary); margin-bottom: 8px;">
             ${adminIcon('upload', { size: 32 })}
           </div>
-          <p style="margin: 0 0 4px; font-weight: 600; font-size: 0.92rem;">Cliquez ou glissez-déposez votre fichier CSV ici</p>
-          <span style="font-size: 0.8rem; color: var(--admin-text-muted);" id="import-file-name">Fichiers acceptés : .csv (UTF-8)</span>
+          <p style="margin: 0 0 4px; font-weight: 600; font-size: 0.92rem;">Cliquez ou glissez-déposez votre fichier CSV ou Excel ici</p>
+          <span style="font-size: 0.8rem; color: var(--admin-text-muted);" id="import-file-name">Fichiers acceptés : .csv, .xlsx, .xls (UTF-8)</span>
         </div>
 
         <div id="import-feedback" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: var(--radius-sm); font-size: 0.88rem; line-height: 1.5;"></div>
@@ -674,7 +756,28 @@ export function openCsvImportModal({ model = 'properties', title = 'Importer des
     feedback.style.display = 'none';
 
     const fd = new FormData();
-    fd.append('file', file);
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    if (isExcel) {
+      try {
+        const XLSX = await loadSheetJS();
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const firstSheet = wb.SheetNames[0];
+        const csvText = XLSX.utils.sheet_to_csv(wb.Sheets[firstSheet], { FS: ';' });
+        const csvBlob = new Blob(['\uFEFF' + csvText], { type: 'text/csv;charset=utf-8' });
+        fd.append('file', csvBlob, file.name.replace(/\.(xlsx|xls)$/i, '.csv'));
+      } catch (xlsxErr) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#FDE8E8';
+        feedback.style.color = '#9B1C1C';
+        feedback.textContent = 'Impossible de lire le fichier Excel (vérifiez votre connexion Internet ou enregistrez le fichier en .csv).';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Réessayer';
+        return;
+      }
+    } else {
+      fd.append('file', file);
+    }
     fd.append('model', model);
 
     try {
@@ -739,8 +842,17 @@ export async function initAdminLayout({ activePage = 'dashboard', title = 'Admin
 
   const topbarSlot = document.getElementById('topbar-slot');
   if (topbarSlot) {
-    topbarSlot.innerHTML = Topbar({ title, breadcrumbs, action });
+    topbarSlot.innerHTML = Topbar({ activePage, title, breadcrumbs, action });
   }
+
+  // Bouton retour topbar
+  document.getElementById('topbar-back-btn')?.addEventListener('click', () => {
+    if (window.history.length > 1 && document.referrer && document.referrer.includes('/admin')) {
+      window.history.back();
+    } else {
+      window.location.href = '/admin/';
+    }
+  });
 
   // 2. Bascule de thème
   document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {

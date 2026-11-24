@@ -186,8 +186,8 @@ if ($property) {
                 <button type="button" class="gallery-nav gallery-nav--next" data-gallery-next aria-label="Photo suivante">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
                 </button>
-                <button type="button" class="gallery-expand" data-gallery-open aria-label="Agrandir en plein écran">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                <button type="button" class="gallery-expand" data-gallery-open aria-label="Agrandir l'image" title="Agrandir l'image">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                 </button>
                 <span class="gallery-counter" data-gallery-counter>1 / <?= count($images) ?></span>
               </div>
@@ -197,7 +197,7 @@ if ($property) {
                 <div class="gallery-thumbs" data-gallery-thumbs>
                   <?php foreach ($images as $index => $imgUrl): ?>
                     <button type="button" class="gallery-thumb <?= $index === 0 ? 'is-active' : '' ?>" data-gallery-thumb data-index="<?= $index ?>" aria-label="Photo <?= $index + 1 ?>">
-                      <img src="<?= e($imgUrl) ?>" alt="Photo <?= $index + 1 ?>" loading="lazy">
+                      <img src="<?= e($imgUrl) ?>" alt="Photo <?= $index + 1 ?>">
                     </button>
                   <?php endforeach; ?>
                 </div>
@@ -281,59 +281,59 @@ if ($property) {
           </div>
 
           <!-- Colonne droite : Panneau de contact de l'agence optimisé pour le défilement -->
-          <aside class="contact-panel" style="position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; scrollbar-width: thin;">
-            <h3>Contacter l'agence</h3>
-            <p>Nos conseillers sont à votre disposition pour organiser une visite ou répondre à vos questions.</p>
+          <aside class="contact-panel" style="position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: thin; padding: 18px 20px;">
+            <h3 style="margin-bottom: 4px;">Contacter l'agence</h3>
+            <p style="margin-bottom: 12px; font-size: 0.84rem;">Nos conseillers sont à votre disposition pour organiser une visite.</p>
 
-            <div class="contact-actions" style="margin-bottom: 24px;">
-              <a href="tel:<?= e($agency_phone) ?>" class="btn btn-outline btn-block">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <div class="contact-actions" style="margin-bottom: 14px; gap: 6px;">
+              <a href="tel:<?= e($agency_phone) ?>" class="btn btn-outline btn-sm btn-block">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                 <span>Appeler l'agence</span>
               </a>
 
-              <a href="https://wa.me/<?= e($agency_wa) ?>?text=<?= $wa_msg ?>" target="_blank" rel="noopener" class="btn btn-outline btn-block">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              <a href="https://wa.me/<?= e($agency_wa) ?>?text=<?= $wa_msg ?>" target="_blank" rel="noopener" class="btn btn-outline btn-sm btn-block">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 <span>Discuter sur WhatsApp</span>
               </a>
             </div>
 
-            <hr class="divider" style="margin: 20px 0; border: 0; border-top: 1px solid var(--color-border-soft);">
+            <hr class="divider" style="margin: 12px 0; border: 0; border-top: 1px solid var(--color-border-soft);">
 
             <!-- Formulaire de demande d'information -->
-            <form class="contact-form contact-form--compact" id="bien-contact-form" novalidate>
-              <div class="form-head">
-                <h3 class="form-title">Envoyer une demande</h3>
-                <p class="form-context">Réf : <?= e($property['reference']) ?></p>
+            <form class="contact-form contact-form--compact" id="bien-contact-form" style="gap: 10px;" novalidate>
+              <div class="form-head" style="margin-bottom: 2px;">
+                <h3 class="form-title" style="font-size: 0.98rem;">Envoyer une demande</h3>
+                <p class="form-context" style="margin: 0; font-size: 0.78rem;">Réf : <?= e($property['reference']) ?></p>
               </div>
 
               <input type="hidden" name="bien_id" value="<?= $id ?>">
               <input type="hidden" name="subject" value="Demande d'information — <?= e($titre) ?> (Réf: <?= e($property['reference']) ?>)">
 
-              <div class="form-grid">
+              <div class="form-grid" style="gap: 8px;">
                 <label class="form-field">
                   <span>Nom</span>
-                  <input name="lastname" type="text" required placeholder="Votre nom">
+                  <input name="lastname" type="text" required placeholder="Votre nom" style="padding: 8px 10px;">
                 </label>
                 <label class="form-field">
                   <span>Prénom</span>
-                  <input name="firstname" type="text" required placeholder="Votre prénom">
+                  <input name="firstname" type="text" required placeholder="Votre prénom" style="padding: 8px 10px;">
                 </label>
               </div>
 
-              <div class="form-grid">
+              <div class="form-grid" style="gap: 8px;">
                 <label class="form-field">
                   <span>Téléphone</span>
-                  <input name="phone" type="tel" required placeholder="05 XX XX XX XX">
+                  <input name="phone" type="tel" required placeholder="05 XX XX XX XX" style="padding: 8px 10px;">
                 </label>
                 <label class="form-field">
                   <span>Email</span>
-                  <input name="email" type="email" placeholder="votre@email.com">
+                  <input name="email" type="email" placeholder="votre@email.com" style="padding: 8px 10px;">
                 </label>
               </div>
 
               <label class="form-field">
                 <span>Message</span>
-                <textarea name="message" rows="4" required placeholder="Je souhaite avoir plus de renseignements sur ce bien ou organiser une visite...">Bonjour, je souhaite avoir plus de précisions sur ce bien (<?= e($titre) ?> - Réf: <?= e($property['reference']) ?>) et éventuellement convenir d'une visite. Merci.</textarea>
+                <textarea name="message" rows="3" required style="min-height: 76px; padding: 8px 10px;" placeholder="Je souhaite avoir plus de renseignements sur ce bien ou organiser une visite...">Bonjour, je souhaite avoir plus de précisions sur ce bien (<?= e($titre) ?> - Réf: <?= e($property['reference']) ?>) et éventuellement convenir d'une visite. Merci.</textarea>
               </label>
 
               <button type="submit" class="btn btn-primary btn-block" id="btn-submit-contact">
@@ -360,9 +360,16 @@ if ($property) {
   <!-- Scripts légers et performants pour la galerie et le formulaire -->
   <script>
     (function() {
-      // 1. Galerie photo interactive instantanée
+      // 1. Galerie photo interactive instantanée (avec préchargement immédiat)
       var images = <?= json_encode($images ?? []) ?>;
       if (images.length > 0) {
+        // Précharger toutes les photos en arrière-plan dès l'ouverture de la page
+        var preloadedImgs = images.map(function(src) {
+          var img = new Image();
+          img.src = src;
+          return img;
+        });
+
         var root = document.querySelector('[data-gallery]');
         if (root) {
           var main = root.querySelector('[data-gallery-main]');
@@ -374,8 +381,9 @@ if ($property) {
 
           function update(next) {
             index = (next + images.length) % images.length;
-            if (main) main.src = images[index];
-            if (lightboxImage && !lightbox.hidden) lightboxImage.src = images[index];
+            var targetSrc = images[index];
+            if (main && main.src !== targetSrc) main.src = targetSrc;
+            if (lightboxImage && !lightbox.hidden) lightboxImage.src = targetSrc;
             if (counter) counter.textContent = (index + 1) + ' / ' + images.length;
             thumbs.forEach(function(t, i) { t.classList.toggle('is-active', i === index); });
           }
@@ -385,29 +393,42 @@ if ($property) {
           });
 
           root.querySelectorAll('[data-gallery-prev]').forEach(function(b) {
-            b.addEventListener('click', function() { update(index - 1); });
+            b.addEventListener('click', function(e) { e.stopPropagation(); update(index - 1); });
           });
           root.querySelectorAll('[data-gallery-next]').forEach(function(b) {
-            b.addEventListener('click', function() { update(index + 1); });
+            b.addEventListener('click', function(e) { e.stopPropagation(); update(index + 1); });
           });
+
+          var closeLightbox = function() {
+            if (!lightbox) return;
+            lightbox.hidden = true;
+            document.documentElement.classList.remove('no-scroll');
+          };
 
           var openBtn = root.querySelector('[data-gallery-open]');
           if (openBtn && lightbox) {
             openBtn.addEventListener('click', function() {
               lightbox.hidden = false;
               lightboxImage.src = images[index];
+              document.documentElement.classList.add('no-scroll');
             });
           }
 
           var closeBtn = root.querySelector('[data-lightbox-close]');
           if (closeBtn && lightbox) {
-            closeBtn.addEventListener('click', function() { lightbox.hidden = true; });
+            closeBtn.addEventListener('click', closeLightbox);
           }
           if (lightbox) {
             lightbox.addEventListener('click', function(e) {
-              if (e.target === lightbox) lightbox.hidden = true;
+              if (e.target === lightbox) closeLightbox();
             });
           }
+          document.addEventListener('keydown', function(e) {
+            if (!lightbox || lightbox.hidden) return;
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') update(index - 1);
+            else if (e.key === 'ArrowRight') update(index + 1);
+          });
         }
       }
 

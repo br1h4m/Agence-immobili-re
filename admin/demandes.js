@@ -3,7 +3,7 @@
 
 import {
   initAdminLayout, adminIcon, formatDateTime, formatDate,
-  statusBadge, showToast, confirmModal, escapeHTML, printDocument
+  statusBadge, showToast, confirmModal, escapeHTML, printDocument, exportRecords
 } from '/admin/assets/js/admin.js';
 import {
   getDemandes, getDemandeById, updateDemandeStatus, deleteDemande,
@@ -165,16 +165,24 @@ function renderBulkBar() {
   }
 
   container.innerHTML = `
-    <div class="bulk-actions-bar">
+    <div class="bulk-actions-bar is-visible">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="bulk-badge">${selectedDemandeIds.size}</span>
         <span style="font-weight: 600;">demande${selectedDemandeIds.size > 1 ? 's' : ''} sélectionnée${selectedDemandeIds.size > 1 ? 's' : ''}</span>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-cancel">Annuler</button>
         <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-mark-read">
           ${adminIcon('check', { size: 14 })}
-          <span>Marquer comme lu (${selectedDemandeIds.size})</span>
+          <span>Marquer lu (${selectedDemandeIds.size})</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-csv">
+          ${adminIcon('download', { size: 14 })}
+          <span>CSV</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-bulk-export-excel">
+          ${adminIcon('download', { size: 14 })}
+          <span>Excel</span>
         </button>
         <button type="button" class="btn btn-icon--danger btn-sm" id="btn-bulk-delete" style="background: var(--admin-danger); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
           ${adminIcon('trash', { size: 14 })}
@@ -188,6 +196,28 @@ function renderBulkBar() {
     selectedDemandeIds.clear();
     renderResults();
   });
+
+  const exportSelected = (format) => {
+    const selected = getDemandes(currentFilters).filter((d) => selectedDemandeIds.has(String(d.id)));
+    exportRecords({
+      filename: `demandes_immolode_${new Date().toISOString().slice(0, 10)}`,
+      format,
+      rows: selected,
+      columns: [
+        { label: 'ID', key: 'id' },
+        { label: 'Date', value: (r) => formatDateTime(r.createdAt) },
+        { label: 'Type', key: 'type' },
+        { label: 'Client', key: 'nom' },
+        { label: 'Email', key: 'email' },
+        { label: 'Téléphone', key: 'phone' },
+        { label: 'Sujet', key: 'subject' },
+        { label: 'Message', key: 'message' },
+        { label: 'Statut', key: 'status' }
+      ]
+    });
+  };
+  document.getElementById('btn-bulk-export-csv')?.addEventListener('click', () => exportSelected('csv'));
+  document.getElementById('btn-bulk-export-excel')?.addEventListener('click', () => exportSelected('excel'));
 
   document.getElementById('btn-bulk-mark-read')?.addEventListener('click', async () => {
     const ids = Array.from(selectedDemandeIds);
@@ -400,13 +430,20 @@ function bindTableEvents(container) {
     });
   });
 
-  // Ligne de tableau cliquable
+  // Ligne de tableau cliquable (sélection en mode sélection, sinon ouverture dossier)
   container.querySelectorAll('tbody tr').forEach((tr) => {
     tr.addEventListener('click', (e) => {
       if (e.target.closest('button') || e.target.closest('select') || e.target.closest('a') || e.target.closest('input[type="checkbox"]')) {
         return;
       }
-      openDrawer(tr.dataset.id);
+      const id = String(tr.dataset.id);
+      if (isSelectMode) {
+        if (selectedDemandeIds.has(id)) selectedDemandeIds.delete(id);
+        else selectedDemandeIds.add(id);
+        renderResults();
+        return;
+      }
+      openDrawer(id);
     });
   });
 
@@ -463,6 +500,7 @@ function openDrawer(id) {
   // Auto-marquer comme lu à l'ouverture de la demande
   markDemandeRead(id, 1).then(() => {
     demande.is_read = 1;
+    renderResults();
   });
 
   const drawer = document.getElementById('demande-drawer');
@@ -473,7 +511,9 @@ function openDrawer(id) {
   const isFicheClient = demande.type === 'Fiche client' || demande.isFicheClient;
   const d = demande.details || {};
   const doc = demande.pieceIdentite || {};
-  const isImageDoc = doc.dataUrl && !doc.name?.toLowerCase().endsWith('.pdf');
+  const docSrc = doc.dataUrl || (doc.name ? '/uploads/documents/' + doc.name : null);
+  const isPdf = (doc.name || '').toLowerCase().endsWith('.pdf');
+  const isImageDoc = docSrc && !isPdf;
 
   let detailsBlock = '';
   if (isEstimation) {
@@ -531,11 +571,11 @@ function openDrawer(id) {
               </div>
               <div style="display: flex; gap: 8px;">
                 ${isImageDoc ? `
-                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}">
+                  <button type="button" class="btn btn-outline btn-sm btn-zoom-doc" data-img="${escapeHTML(docSrc)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}">
                     ${adminIcon('eye', { size: 14 })} Inspecter en grand
                   </button>
-                ` : (doc.dataUrl ? `
-                  <a href="${escapeHTML(doc.dataUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+                ` : (docSrc ? `
+                  <a href="${escapeHTML(docSrc)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
                     ${adminIcon('download', { size: 14 })} Télécharger le PDF
                   </a>
                 ` : `
@@ -545,8 +585,8 @@ function openDrawer(id) {
             </div>
 
             ${isImageDoc ? `
-              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(doc.dataUrl)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}" title="Cliquez pour zoomer en plein écran">
-                <img src="${escapeHTML(doc.dataUrl)}" alt="Pièce d'identité" class="doc-inspect-img">
+              <div class="doc-inspect-preview btn-zoom-doc" data-img="${escapeHTML(docSrc)}" data-caption="Carte d'identité — ${escapeHTML(demande.nom || '')}" title="Cliquez pour zoomer en plein écran">
+                <img src="${escapeHTML(docSrc)}" alt="Pièce d'identité" class="doc-inspect-img">
                 <div class="doc-inspect-overlay">
                   ${adminIcon('search', { size: 18 })}
                   <span>Cliquer pour inspecter en plein écran</span>
@@ -675,6 +715,7 @@ function openDrawer(id) {
 
   // IMPRESSION PROFESSIONNELLE DÉDIÉE (Sans duplication, sans coupure d'écran)
   document.getElementById('drawer-btn-print')?.addEventListener('click', () => {
+    const fresh = getDemandeById(id) || demande;
     const printDetails = [];
     if (isEstimation) {
       if (d.type) printDetails.push(['Type de bien', d.type]);
@@ -687,26 +728,26 @@ function openDrawer(id) {
       if (d.bathrooms) printDetails.push(['Salles de bain', d.bathrooms]);
       if (d.garage) printDetails.push(['Garage / Parking', d.garage]);
     } else if (isFicheClient) {
-      printDetails.push(['Opération', demande.transaction || 'Demande']);
-      printDetails.push(['Type de bien recherché', demande.typeBien || 'Appartement']);
+      printDetails.push(['Opération', fresh.transaction || 'Demande']);
+      printDetails.push(['Type de bien recherché', fresh.typeBien || 'Appartement']);
       printDetails.push(['Engagement formel', 'Honoraires d\'agence acceptés']);
     }
 
     printDocument({
       title: isEstimation ? 'Fiche d\'estimation immobilière' : (isFicheClient ? 'Dossier officiel de constitution client' : 'Fiche de prise de contact client'),
-      type: demande.type || 'Contact',
-      reference: demande.reference || `DEM-${demande.id}`,
-      date: formatDateTime(demande.createdAt),
-      status: demande.status,
+      type: fresh.type || 'Contact',
+      reference: fresh.reference || `DEM-${fresh.id}`,
+      date: formatDateTime(fresh.createdAt),
+      status: fresh.status,
       client: {
-        nom: demande.nom,
-        phone: demande.phone,
-        email: demande.email
+        nom: fresh.nom,
+        phone: fresh.phone,
+        email: fresh.email
       },
       details: printDetails,
-      message: demande.message,
-      signature: demande.signature,
-      attachment: demande.pieceIdentite
+      message: fresh.message,
+      signature: fresh.signature,
+      attachment: fresh.pieceIdentite
     });
   });
 
@@ -748,7 +789,7 @@ function openLightbox(imgUrl, captionText) {
   if (lbCaption) {
     lbCaption.innerHTML = `
       <span>${escapeHTML(captionText || "Pièce d'identité officielle")}</span>
-      <a href="${escapeHTML(imgUrl)}" download class="btn btn-outline btn-sm" style="color:#FFF; border-color:rgba(255,255,255,0.4);">
+      <a href="${escapeHTML(imgUrl)}" download class="btn btn-sm" style="background: rgba(255,255,255,0.16); color:#FFF; border: 1px solid rgba(255,255,255,0.45);">
         ${adminIcon('download', { size: 14 })} Télécharger
       </a>
     `;
