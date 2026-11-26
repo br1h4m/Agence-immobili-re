@@ -43,6 +43,14 @@ async function init() {
           ${adminIcon('upload', { size: 14 })}
           <span>Importer CSV / Excel</span>
         </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-users-excel" title="Exporter tous les utilisateurs en Excel (.xlsx)">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export Excel</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-users-csv" title="Exporter tous les utilisateurs en CSV">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export CSV</span>
+        </button>
         <button type="button" class="btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm" id="btn-toggle-select-mode">
           ${adminIcon('check', { size: 14 })}
           <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>
@@ -68,6 +76,14 @@ async function init() {
     openCsvImportModal({ model: 'utilisateurs', title: 'Importer des utilisateurs', onImportSuccess: () => {
       renderUsers();
     } });
+  });
+
+  // Bouton export complet
+  document.getElementById('btn-export-all-users-excel')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=users&format=xlsx';
+  });
+  document.getElementById('btn-export-all-users-csv')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=users&format=csv';
   });
 
   // Bouton mode sélection
@@ -125,10 +141,13 @@ function renderBulkBar() {
   });
 
   const exportSelected = (format) => {
+    const ids = Array.from(selectedUserIds);
     const selected = getUsers().filter((u) => selectedUserIds.has(String(u.id)));
     exportRecords({
-      filename: `membres_immolode_${new Date().toISOString().slice(0, 10)}`,
+      filename: `utilisateurs_selection_${new Date().toISOString().slice(0, 10)}`,
       format,
+      model: 'users',
+      ids,
       rows: selected,
       columns: [
         { label: 'ID', key: 'id' },
@@ -501,26 +520,33 @@ function openUserDrawer(id = null) {
   avatarFileInput?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Veuillez sélectionner un fichier image valide (JPG, PNG, WebP).', 'error');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('L\'image est trop volumineuse (max 15 Mo).', 'error');
+      return;
+    }
+
     const fd = new FormData();
     fd.append('file', file);
     fd.append('folder', 'avatars');
     try {
       const res = await fetch('/api/upload.php', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.success && data.url) {
+      const data = await res.json().catch(() => ({ success: false, message: 'Réponse serveur invalide' }));
+      if (res.ok && data.success && data.url) {
         avatarInput.value = data.url;
         const preview = document.getElementById('user-avatar-preview');
         if (preview) preview.innerHTML = `<img src="${escapeHTML(data.url)}" style="width:100%;height:100%;object-fit:cover;">`;
+        showToast('Photo de profil téléversée avec succès !');
+      } else {
+        showToast(data.message || data.error || 'Erreur lors du téléversement', 'error');
       }
     } catch (err) {
-      // Fallback : DataURL locale
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        avatarInput.value = ev.target.result;
-        const preview = document.getElementById('user-avatar-preview');
-        if (preview) preview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-      };
-      reader.readAsDataURL(file);
+      console.error('Erreur upload avatar utilisateur:', err);
+      showToast('Impossible de contacter le service de stockage : ' + (err.message || 'Erreur réseau'), 'error');
     }
   });
 

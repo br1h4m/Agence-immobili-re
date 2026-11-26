@@ -399,25 +399,39 @@ let badgeSyncInterval = null;
 export function startRealtimeBadgeSync() {
   if (badgeSyncInterval) clearInterval(badgeSyncInterval);
 
+  const updateBadgeEl = (el, count) => {
+    if (!el) return;
+    const num = Math.max(0, parseInt(count, 10) || 0);
+    el.textContent = String(num);
+    if (num > 0) {
+      el.removeAttribute('hidden');
+      el.hidden = false;
+      el.classList.remove('is-empty');
+      el.style.display = 'inline-flex';
+    } else {
+      el.setAttribute('hidden', '');
+      el.hidden = true;
+      el.classList.add('is-empty');
+      el.style.display = 'none';
+    }
+  };
+
   const sync = async () => {
     try {
-      const res = await fetch('/api/stats.php');
+      const res = await fetch('/api/stats.php', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
-      
-      const demandesBadge = document.getElementById('badge-demandes');
-      if (demandesBadge) {
-        const count = data.unreadDemandes ?? data.demandes_non_lues ?? 0;
-        demandesBadge.textContent = count;
-        demandesBadge.style.display = count > 0 ? '' : 'none';
-      }
 
-      const fichesBadge = document.getElementById('badge-fiches');
-      if (fichesBadge) {
-        const count = data.unreadFichesClient ?? data.fiches_non_lues ?? 0;
-        fichesBadge.textContent = count;
-        fichesBadge.style.display = count > 0 ? '' : 'none';
-      }
+      updateBadgeEl(document.getElementById('badge-demandes'), data.unreadDemandes ?? data.demandes_non_lues ?? 0);
+      updateBadgeEl(document.getElementById('badge-fiches'), data.unreadFichesClient ?? data.fiches_non_lues ?? 0);
+
+      try {
+        localStorage.setItem('immolode_unread_stats', JSON.stringify({
+          unreadDemandes: data.unreadDemandes ?? data.demandes_non_lues ?? 0,
+          unreadFichesClient: data.unreadFichesClient ?? data.fiches_non_lues ?? 0,
+          timestamp: Date.now()
+        }));
+      } catch (_) {}
     } catch (_) {}
   };
 
@@ -519,22 +533,33 @@ export async function openProfileModal() {
   fileInput?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Veuillez sélectionner un fichier image valide (JPG, PNG, WebP).', 'error');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('L\'image est trop volumineuse (max 15 Mo).', 'error');
+      return;
+    }
+
     const fd = new FormData();
     fd.append('file', file);
+    fd.append('folder', 'avatars');
+
     try {
       const res = await fetch('/api/upload.php', { method: 'POST', body: fd });
-      const d = await res.json();
-      if (d.success && d.url) {
+      const d = await res.json().catch(() => ({ success: false, message: 'Réponse serveur invalide' }));
+      if (res.ok && d.success && d.url) {
         urlInput.value = d.url;
         preview.innerHTML = `<img src="${escapeHTML(d.url)}" style="width:100%;height:100%;object-fit:cover;">`;
+        showToast('Photo de profil importée avec succès !');
+      } else {
+        showToast(d.message || d.error || 'Erreur lors du téléversement de la photo', 'error');
       }
-    } catch (_) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        urlInput.value = ev.target.result;
-        preview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-      };
-      reader.readAsDataURL(file);
+    } catch (uploadErr) {
+      console.error('Erreur téléversement avatar:', uploadErr);
+      showToast('Impossible de contacter le serveur de stockage : ' + (uploadErr.message || 'Erreur réseau'), 'error');
     }
   });
 
@@ -566,17 +591,18 @@ export async function openProfileModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ success: false, error: 'Réponse serveur non reconnue (HTTP ' + res.status + ')' }));
       if (res.ok && data.success) {
         showToast('Profil mis à jour avec succès !');
         updateLocalUser(data.user || payload);
         close();
         setTimeout(() => window.location.reload(), 400);
       } else {
-        showToast(data.error || 'Erreur lors de la mise à jour', 'error');
+        showToast(data.error || data.message || ('Erreur ' + res.status + ' lors de la mise à jour'), 'error');
       }
     } catch (err) {
-      showToast('Erreur réseau', 'error');
+      console.error('Erreur mise à jour profil:', err);
+      showToast(err.message ? ('Erreur : ' + err.message) : 'Erreur de communication avec le serveur', 'error');
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -601,7 +627,29 @@ function loadSheetJS() {
   return sheetJsPromise;
 }
 
-export async function exportRecords({ filename = 'export', columns = [], rows = [], format = 'csv' } = {}) {
+export async function exportRecords({ filename = 'export', columns = [], rows = [], format = 'csv', model = null, ids = [] } = {}) {
+  // 1. Export prioritaire direct côté serveur MySQL (générateur OOXML natif ou CSV)
+  if (model) {
+    try {
+      const url = new URL('/api/export.php', window.location.origin);
+      url.searchParams.set('model', model);
+      url.searchParams.set('format', format === 'excel' ? 'xlsx' : 'csv');
+      if (ids && ids.length) {
+        url.searchParams.set('ids', ids.join(','));
+      }
+      const res = await fetch(url.toString());
+      if (res.ok) {
+        const blob = await res.blob();
+        const ext = format === 'excel' ? 'xlsx' : 'csv';
+        triggerDownload(blob, `${filename}.${ext}`);
+        showToast(`Export ${format === 'excel' ? 'Excel (.xlsx)' : 'CSV'} téléchargé avec succès`);
+        return;
+      }
+    } catch (err) {
+      console.warn('Repli export client suite à :', err);
+    }
+  }
+
   if (!rows.length) {
     showToast('Aucune ligne sélectionnée à exporter.', 'error');
     return;
@@ -689,14 +737,19 @@ export function openCsvImportModal({ model = 'properties', title = 'Importer des
         Sélectionnez un fichier CSV ou Excel pour ajouter automatiquement plusieurs enregistrements dans la base de données.
       </p>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px 14px; background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-sm);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px 14px; background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-sm); flex-wrap: wrap; gap: 10px;">
         <div>
           <strong style="font-size: 0.88rem; display: block;">Modèle type de fichier</strong>
           <span style="font-size: 0.8rem; color: var(--admin-text-muted);">Téléchargez la structure attendue avec les colonnes correctes.</span>
         </div>
-        <a href="/api/import.php?action=template&model=${encodeURIComponent(model)}" class="btn btn-outline btn-sm" download>
-          ${adminIcon('download', { size: 14 })} Modèle CSV
-        </a>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <a href="/api/import.php?action=template&model=${encodeURIComponent(model)}&format=xlsx" class="btn btn-outline btn-sm" download>
+            ${adminIcon('download', { size: 14 })} Modèle Excel (.xlsx)
+          </a>
+          <a href="/api/import.php?action=template&model=${encodeURIComponent(model)}&format=csv" class="btn btn-outline btn-sm" download>
+            ${adminIcon('download', { size: 14 })} Modèle CSV
+          </a>
+        </div>
       </div>
 
       <form id="import-form">
@@ -756,41 +809,43 @@ export function openCsvImportModal({ model = 'properties', title = 'Importer des
     feedback.style.display = 'none';
 
     const fd = new FormData();
-    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
-    if (isExcel) {
+    const isLegacyXls = /\.xls$/i.test(file.name);
+    if (isLegacyXls) {
+      // Vérifier si le .xls est un ancien binaire OLE2 (D0 CF 11 E0) nécessitant conversion SheetJS
       try {
-        const XLSX = await loadSheetJS();
-        const buf = await file.arrayBuffer();
-        const wb = XLSX.read(buf, { type: 'array' });
-        const firstSheet = wb.SheetNames[0];
-        const csvText = XLSX.utils.sheet_to_csv(wb.Sheets[firstSheet], { FS: ';' });
-        const csvBlob = new Blob(['\uFEFF' + csvText], { type: 'text/csv;charset=utf-8' });
-        fd.append('file', csvBlob, file.name.replace(/\.(xlsx|xls)$/i, '.csv'));
-      } catch (xlsxErr) {
-        feedback.style.display = 'block';
-        feedback.style.background = '#FDE8E8';
-        feedback.style.color = '#9B1C1C';
-        feedback.textContent = 'Impossible de lire le fichier Excel (vérifiez votre connexion Internet ou enregistrez le fichier en .csv).';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Réessayer';
-        return;
+        const headBytes = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+        const isOle2 = headBytes[0] === 0xD0 && headBytes[1] === 0xCF && headBytes[2] === 0x11 && headBytes[3] === 0xE0;
+        if (isOle2) {
+          const XLSX = await loadSheetJS();
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: 'array' });
+          const firstSheet = wb.SheetNames[0];
+          const csvText = XLSX.utils.sheet_to_csv(wb.Sheets[firstSheet], { FS: ';' });
+          const csvBlob = new Blob(['\uFEFF' + csvText], { type: 'text/csv;charset=utf-8' });
+          fd.append('file', csvBlob, file.name.replace(/\.xls$/i, '.csv'));
+        } else {
+          fd.append('file', file);
+        }
+      } catch (_) {
+        fd.append('file', file);
       }
     } else {
+      // Envoyer directement le véritable fichier .xlsx ou .csv au serveur PHP
       fd.append('file', file);
     }
     fd.append('model', model);
 
     try {
       const res = await fetch('/api/import.php', { method: 'POST', body: fd });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ success: false, error: `Réponse serveur invalide (HTTP ${res.status})` }));
 
       feedback.style.display = 'block';
       if (res.ok && data.success) {
-        feedback.style.background = '#EBF7EE';
-        feedback.style.color = '#186A3B';
-        feedback.style.border = '1px solid #C3E6CB';
+        feedback.style.background = 'var(--admin-success-soft, #EBF7EE)';
+        feedback.style.color = 'var(--admin-success, #186A3B)';
+        feedback.style.border = '1px solid var(--admin-success, #C3E6CB)';
         feedback.innerHTML = `
-          <strong>${data.message}</strong>
+          <strong>${escapeHTML(data.message || 'Importation terminée')}</strong>
           ${data.errors?.length ? `<ul style="margin: 8px 0 0 16px;">${data.errors.map(err => `<li>${escapeHTML(err)}</li>`).join('')}</ul>` : ''}
         `;
         showToast(`Importation réussie : ${data.imported} élément(s)`);
@@ -801,18 +856,22 @@ export function openCsvImportModal({ model = 'properties', title = 'Importer des
           }, 1200);
         }
       } else {
-        feedback.style.background = '#FDE8E8';
-        feedback.style.color = '#9B1C1C';
-        feedback.style.border = '1px solid #F8B4B4';
-        feedback.textContent = data.error || 'Erreur lors de l\'importation';
+        feedback.style.background = 'var(--admin-danger-soft, #FDE8E8)';
+        feedback.style.color = 'var(--admin-danger, #9B1C1C)';
+        feedback.style.border = '1px solid var(--admin-danger, #F8B4B4)';
+        feedback.innerHTML = `
+          <strong>${escapeHTML(data.error || 'Erreur lors de l\'importation')}</strong>
+          ${data.errors?.length ? `<ul style="margin: 8px 0 0 16px;">${data.errors.map(err => `<li>${escapeHTML(err)}</li>`).join('')}</ul>` : ''}
+        `;
         submitBtn.disabled = false;
         submitBtn.textContent = 'Réessayer';
       }
     } catch (err) {
       feedback.style.display = 'block';
-      feedback.style.background = '#FDE8E8';
-      feedback.style.color = '#9B1C1C';
-      feedback.textContent = 'Erreur réseau lors de l\'envoi du fichier.';
+      feedback.style.background = 'var(--admin-danger-soft, #FDE8E8)';
+      feedback.style.color = 'var(--admin-danger, #9B1C1C)';
+      feedback.style.border = '1px solid var(--admin-danger, #F8B4B4)';
+      feedback.textContent = err?.message ? `Erreur lors de l'envoi : ${err.message}` : 'Impossible de joindre le serveur d\'importation.';
       submitBtn.disabled = false;
       submitBtn.textContent = 'Réessayer';
     }

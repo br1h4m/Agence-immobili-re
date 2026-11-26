@@ -53,7 +53,7 @@ if (empty($wa_num)) $wa_num = '213555123456';
 
   <!-- Leaflet Carte Interactive (OpenStreetMap) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -215,16 +215,59 @@ if (empty($wa_num)) $wa_num = '213555123456';
   <!-- Soumission AJAX simple et carte interactive Leaflet -->
   <script>
     (function() {
-      // 1. Initialisation carte Leaflet du siège Imolode
-      var mapEl = document.getElementById('contact-map');
-      if (mapEl && typeof L !== 'undefined') {
-        var map = L.map('contact-map', { scrollWheelZoom: false }).setView([36.7511, 5.0567], 14);
+      // 1. Initialisation carte Leaflet du siège Imolode (référence footer)
+      function initContactMap() {
+        var mapEl = document.getElementById('contact-map');
+        if (!mapEl || typeof L === 'undefined') {
+          setTimeout(initContactMap, 100);
+          return;
+        }
+
+        var footerAddrEl = document.querySelector('.footer-contact li:last-child span') || document.querySelector('.footer-contact span:last-child');
+        var fullAddress = (footerAddrEl ? footerAddrEl.textContent.trim() : <?= json_encode($address ?? '12 rue Didouche Mourad, Béjaïa 06000, Algérie') ?>) || '12 rue Didouche Mourad, Béjaïa 06000, Algérie';
+
+        var defaultLat = 36.7511;
+        var defaultLng = 5.0567;
+        var lowerAddr = fullAddress.toLowerCase();
+        if (lowerAddr.indexOf('mouradia') !== -1 || lowerAddr.indexOf('alger') !== -1 || lowerAddr.indexOf('hydra') !== -1) {
+          defaultLat = 36.7538;
+          defaultLng = 3.0588;
+        } else if (lowerAddr.indexOf('oran') !== -1) {
+          defaultLat = 35.6971;
+          defaultLng = -0.6308;
+        }
+
+        var map = L.map('contact-map', { scrollWheelZoom: false }).setView([defaultLat, defaultLng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19
         }).addTo(map);
 
-        var marker = L.marker([36.7511, 5.0567]).addTo(map);
-        marker.bindPopup('<strong>Imolode Immobilier</strong><br><?= addslashes(e($address)) ?>').openPopup();
+        var marker = L.marker([defaultLat, defaultLng]).addTo(map);
+        marker.bindPopup('<strong>Imolode — Agence Immobilière</strong><br>' + fullAddress).openPopup();
+
+        try {
+          var cleanQuery = fullAddress.replace(/,\s*Algérie/i, '').trim();
+          fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(cleanQuery), {
+            headers: { 'Accept': 'application/json' }
+          })
+          .then(function(res) { return res.json(); })
+          .then(function(results) {
+            if (results && results.length > 0 && results[0].lat && results[0].lon) {
+              var newLat = parseFloat(results[0].lat);
+              var newLng = parseFloat(results[0].lon);
+              map.setView([newLat, newLng], 15);
+              marker.setLatLng([newLat, newLng]);
+            }
+          })
+          .catch(function() {});
+        } catch (_) {}
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initContactMap);
+      } else {
+        initContactMap();
       }
       var form = document.getElementById('contact-page-form');
       if (form) {

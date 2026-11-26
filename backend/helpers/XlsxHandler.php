@@ -57,7 +57,7 @@ class XlsxHandler {
                 break;
             }
             $hdr = unpack(
-                'vmethod/Vcrc/VcompSize/VuncompSize/vnameLen/vextraLen/vcommentLen/vdisk/vintAttr/VextAttr/VlocalOffset',
+                'vmethod/vtime/vdate/Vcrc/VcompSize/VuncompSize/vnameLen/vextraLen/vcommentLen/vdisk/vintAttr/VextAttr/VlocalOffset',
                 substr($binary, $pos + 10, 36)
             );
             $name = substr($binary, $pos + 46, $hdr['nameLen']);

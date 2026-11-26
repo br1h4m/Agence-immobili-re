@@ -3,11 +3,11 @@
 
 import {
   initAdminLayout, adminIcon, formatDateTime, formatDate,
-  statusBadge, showToast, confirmModal, escapeHTML, printDocument, exportRecords
+  statusBadge, showToast, confirmModal, escapeHTML, printDocument, exportRecords, openCsvImportModal
 } from '/admin/assets/js/admin.js';
 import {
   getDemandes, getDemandeById, updateDemandeStatus, deleteDemande,
-  bulkDeleteDemandes, markDemandeRead, bulkMarkDemandesRead
+  bulkDeleteDemandes, markDemandeRead, bulkMarkDemandesRead, syncWithBackend
 } from '/admin/data/admin-store.js';
 
 let currentFilters = {
@@ -38,7 +38,19 @@ async function init() {
       <div style="font-size: 0.88rem; color: var(--admin-text);">
         <strong>Dossiers officiels :</strong> Vous recherchez les fiches clients avec signatures électroniques et justificatifs d'identité ?
       </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-import-demandes" title="Importer des demandes depuis un fichier Excel ou CSV">
+          ${adminIcon('upload', { size: 14 })}
+          <span>Importer CSV / Excel</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-demandes-excel" title="Exporter toutes les demandes en Excel (.xlsx)">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export Excel</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-demandes-csv" title="Exporter toutes les demandes en CSV">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export CSV</span>
+        </button>
         <a href="/admin/fiches-client" class="btn btn-primary btn-sm" style="flex-shrink: 0;">
           ${adminIcon('file-text', { size: 14 })}
           <span>Consulter les fiches client</span>
@@ -86,6 +98,28 @@ async function init() {
     <!-- Conteneur des résultats -->
     <div id="demandes-results"></div>
   `;
+
+  // Importer CSV / Excel
+  document.getElementById('btn-import-demandes')?.addEventListener('click', () => {
+    openCsvImportModal({
+      model: 'demandes',
+      title: 'Importer des demandes',
+      onImportSuccess: () => {
+        syncWithBackend().then(() => {
+          window._syncBadgesNow?.();
+          renderResults();
+        });
+      }
+    });
+  });
+
+  // Export complet direct
+  document.getElementById('btn-export-all-demandes-excel')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=demandes&format=xlsx';
+  });
+  document.getElementById('btn-export-all-demandes-csv')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=demandes&format=csv';
+  });
 
   // Toggle mode sélection
   document.getElementById('btn-toggle-select-mode')?.addEventListener('click', () => {
@@ -198,10 +232,16 @@ function renderBulkBar() {
   });
 
   const exportSelected = (format) => {
-    const selected = getDemandes(currentFilters).filter((d) => selectedDemandeIds.has(String(d.id)));
+    const uids = Array.from(selectedDemandeIds);
+    const getUid = (d) => d.uid || `${d.sourceType || (d.isFicheClient ? 'fiche_client' : 'demande')}:${d.id}`;
+    const selected = getDemandes(currentFilters).filter((d) => selectedDemandeIds.has(getUid(d)));
+    const onlyDemandes = selected.length > 0 && selected.every((d) => (d.sourceType || (d.isFicheClient ? 'fiche_client' : 'demande')) === 'demande');
+    const numericIds = selected.map((d) => d.id);
     exportRecords({
-      filename: `demandes_immolode_${new Date().toISOString().slice(0, 10)}`,
+      filename: `demandes_selection_${new Date().toISOString().slice(0, 10)}`,
       format,
+      model: onlyDemandes ? 'demandes' : null,
+      ids: onlyDemandes ? numericIds : [],
       rows: selected,
       columns: [
         { label: 'ID', key: 'id' },
@@ -269,13 +309,15 @@ function renderResults() {
     return;
   }
 
-  const allChecked = list.length > 0 && list.every((item) => selectedDemandeIds.has(String(item.id)));
+  const getUid = (item) => item.uid || `${item.sourceType || (item.isFicheClient ? 'fiche_client' : 'demande')}:${item.id}`;
+  const allChecked = list.length > 0 && list.every((item) => selectedDemandeIds.has(getUid(item)));
 
   const rows = list.map((item) => {
+    const uid = getUid(item);
     const isEstimation = item.type === 'Estimation';
     const isFicheClient = item.type === 'Fiche client';
     const isUnread = item.is_read === 0 || item.is_read === '0' || item.is_read === false;
-    const isSelected = selectedDemandeIds.has(String(item.id));
+    const isSelected = selectedDemandeIds.has(uid);
 
     let typeBadge = '';
     if (isFicheClient) {
@@ -298,10 +340,10 @@ function renderResults() {
     }
 
     return `
-      <tr data-id="${item.id}" class="${isSelected ? 'is-selected' : ''} ${isUnread ? 'is-unread' : ''}" style="${isUnread ? 'font-weight: 600;' : ''}" title="Cliquez pour consulter le dossier complet">
+      <tr data-id="${escapeHTML(uid)}" class="${isSelected ? 'is-selected' : ''} ${isUnread ? 'is-unread' : ''}" style="${isUnread ? 'font-weight: 600;' : ''}" title="Cliquez pour consulter le dossier complet">
         ${isSelectMode ? `
           <td style="width: 44px; text-align: center;">
-            <input type="checkbox" class="demande-row-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''}>
+            <input type="checkbox" class="demande-row-checkbox" data-id="${escapeHTML(uid)}" ${isSelected ? 'checked' : ''}>
           </td>
         ` : ''}
         <td>
@@ -337,7 +379,7 @@ function renderResults() {
           </div>
         </td>
         <td>
-          <select class="form-select select-status-quick" data-id="${item.id}" style="padding: 4px 8px; font-size: 0.8rem; border-radius: var(--radius-xs);">
+          <select class="form-select select-status-quick" data-id="${escapeHTML(uid)}" style="padding: 4px 8px; font-size: 0.8rem; border-radius: var(--radius-xs);">
             <option value="Nouveau" ${item.status === 'Nouveau' ? 'selected' : ''}>Nouveau</option>
             <option value="En cours" ${item.status === 'En cours' ? 'selected' : ''}>En cours</option>
             <option value="Validé" ${item.status === 'Validé' ? 'selected' : ''}>Validé</option>
@@ -347,13 +389,13 @@ function renderResults() {
         </td>
         <td>
           <div class="table-actions">
-            <button type="button" class="btn-icon btn-toggle-read" data-id="${item.id}" data-read="${isUnread ? '0' : '1'}" title="${isUnread ? 'Marquer comme lu' : 'Marquer comme non lu'}">
+            <button type="button" class="btn-icon btn-toggle-read" data-id="${escapeHTML(uid)}" data-read="${isUnread ? '0' : '1'}" title="${isUnread ? 'Marquer comme lu' : 'Marquer comme non lu'}">
               ${adminIcon(isUnread ? 'check' : 'mail', { size: 15 })}
             </button>
-            <button type="button" class="btn-icon btn-view-demande" data-id="${item.id}" title="Consulter la demande en détail" aria-label="Voir les détails">
+            <button type="button" class="btn-icon btn-view-demande" data-id="${escapeHTML(uid)}" title="Consulter la demande en détail" aria-label="Voir les détails">
               ${adminIcon('eye', { size: 16 })}
             </button>
-            <button type="button" class="btn-icon btn-icon--danger btn-delete-demande" data-id="${item.id}" title="Supprimer la demande" aria-label="Supprimer">
+            <button type="button" class="btn-icon btn-icon--danger btn-delete-demande" data-id="${escapeHTML(uid)}" title="Supprimer la demande" aria-label="Supprimer">
               ${adminIcon('trash', { size: 16 })}
             </button>
           </div>
@@ -401,8 +443,9 @@ function bindTableEvents(container) {
     const checked = e.target.checked;
     const list = getDemandes(currentFilters);
     list.forEach((item) => {
-      if (checked) selectedDemandeIds.add(String(item.id));
-      else selectedDemandeIds.delete(String(item.id));
+      const uid = item.uid || `${item.sourceType || (item.isFicheClient ? 'fiche_client' : 'demande')}:${item.id}`;
+      if (checked) selectedDemandeIds.add(uid);
+      else selectedDemandeIds.delete(uid);
     });
     renderResults();
   });

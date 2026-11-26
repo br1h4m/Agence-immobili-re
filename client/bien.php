@@ -96,15 +96,24 @@ if ($property) {
     // Coordonnées de contact agence
     $agency_phone = "+213 555 12 34 56";
     $agency_wa    = "213555123456";
-    $param_res = $conn->query("SELECT `valeur` FROM `parametres` WHERE `cle` = 'agence_telephone' LIMIT 1");
-    if ($param_res && $p_row = $param_res->fetch_assoc()) {
-        $agency_phone = $p_row['valeur'];
-        $agency_wa = preg_replace('/[^0-9]/', '', $agency_phone);
+    $agency_address = "12 rue Didouche Mourad, Béjaïa 06000, Algérie";
+    $param_res = $conn->query("SELECT `cle`, `valeur` FROM `parametres` WHERE `cle` IN ('agence_telephone', 'phone', 'address', 'agence_adresse')");
+    if ($param_res) {
+        while ($p_row = $param_res->fetch_assoc()) {
+            if (($p_row['cle'] === 'agence_telephone' || $p_row['cle'] === 'phone') && !empty($p_row['valeur'])) {
+                $agency_phone = $p_row['valeur'];
+                $agency_wa = preg_replace('/[^0-9]/', '', $agency_phone);
+            }
+            if (($p_row['cle'] === 'address' || $p_row['cle'] === 'agence_adresse') && !empty($p_row['valeur'])) {
+                $agency_address = $p_row['valeur'];
+            }
+        }
     }
 
     $wa_msg = urlencode("Bonjour Immolode, je vous contacte au sujet du bien : {$titre} (Réf: {$property['reference']}) affiché à {$prix}. Est-il toujours disponible ?");
 } else {
     $pageTitle = 'Bien introuvable — Imolode';
+    $agency_address = "12 rue Didouche Mourad, Béjaïa 06000, Algérie";
 }
 ?>
 <!DOCTYPE html>
@@ -129,7 +138,7 @@ if ($property) {
 
   <!-- Leaflet Carte Interactive (OpenStreetMap) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -442,23 +451,62 @@ if ($property) {
         });
       }
 
-      // 3. Initialisation de la carte interactive Leaflet — Siège agence Imolode
-      var mapEl = document.getElementById('property-map');
-      if (mapEl && typeof L !== 'undefined') {
-        // Coordonnées fixes du siège de l'agence : 41 Bld Soudani Boudjemaa El Mouradia, Alger
-        var lat = 36.7538;
-        var lng = 3.0588;
+      // 3. Initialisation de la carte interactive Leaflet — Référence carte de visite (Footer)
+      function initInteractiveMap() {
+        var mapEl = document.getElementById('property-map');
+        if (!mapEl || typeof L === 'undefined') {
+          setTimeout(initInteractiveMap, 100);
+          return;
+        }
 
-        var map = L.map('property-map', { scrollWheelZoom: false }).setView([lat, lng], 15);
+        // Récupérer l'adresse exacte depuis la carte de visite du footer
+        var footerAddrEl = document.querySelector('.footer-contact li:last-child span') || document.querySelector('.footer-contact span:last-child');
+        var fullAddress = (footerAddrEl ? footerAddrEl.textContent.trim() : <?= json_encode($agency_address ?? '12 rue Didouche Mourad, Béjaïa 06000, Algérie') ?>) || '12 rue Didouche Mourad, Béjaïa 06000, Algérie';
+
+        // Coordonnées de repli fiables basées sur l'adresse réelle du footer
+        var defaultLat = 36.7511;
+        var defaultLng = 5.0567; // Béjaïa centre (Didouche Mourad)
+        var lowerAddr = fullAddress.toLowerCase();
+        if (lowerAddr.indexOf('mouradia') !== -1 || lowerAddr.indexOf('alger') !== -1 || lowerAddr.indexOf('hydra') !== -1) {
+          defaultLat = 36.7538;
+          defaultLng = 3.0588; // El Mouradia / Alger
+        } else if (lowerAddr.indexOf('oran') !== -1) {
+          defaultLat = 35.6971;
+          defaultLng = -0.6308;
+        }
+
+        var map = L.map('property-map', { scrollWheelZoom: false }).setView([defaultLat, defaultLng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 19
         }).addTo(map);
 
-        L.marker([lat, lng])
-          .addTo(map)
-          .bindPopup('<strong>Imolode</strong><br>41 Bld Soudani Boudjemaa El Mouradia<br>El Mouradia, Alger')
-          .openPopup();
+        var marker = L.marker([defaultLat, defaultLng]).addTo(map);
+        marker.bindPopup('<strong>Imolode — Agence Immobilière</strong><br>' + fullAddress).openPopup();
+
+        // Géocodage dynamique via Nominatim OpenStreetMap avec l'adresse du footer
+        try {
+          var cleanQuery = fullAddress.replace(/,\s*Algérie/i, '').trim();
+          fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(cleanQuery), {
+            headers: { 'Accept': 'application/json' }
+          })
+          .then(function(res) { return res.json(); })
+          .then(function(results) {
+            if (results && results.length > 0 && results[0].lat && results[0].lon) {
+              var newLat = parseFloat(results[0].lat);
+              var newLng = parseFloat(results[0].lon);
+              map.setView([newLat, newLng], 15);
+              marker.setLatLng([newLat, newLng]);
+            }
+          })
+          .catch(function() {});
+        } catch (_) {}
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initInteractiveMap);
+      } else {
+        initInteractiveMap();
       }
 
       // 4. Soumission directe AJAX du formulaire de contact

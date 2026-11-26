@@ -54,6 +54,14 @@ async function init() {
           ${adminIcon('upload', { size: 14 })}
           <span>Importer CSV / Excel</span>
         </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-fiches-excel" title="Exporter toutes les fiches clients en Excel (.xlsx)">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export Excel</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-fiches-csv" title="Exporter toutes les fiches clients en CSV">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export CSV</span>
+        </button>
         <button type="button" class="btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm" id="btn-toggle-select-mode">
           ${adminIcon('check', { size: 14 })}
           <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>
@@ -110,10 +118,19 @@ async function init() {
   document.getElementById('btn-import-fiches')?.addEventListener('click', () => {
     openCsvImportModal({ model: 'fiches_client', title: 'Importer des fiches client', onImportSuccess: () => {
       syncWithBackend().then(() => {
+        window._syncBadgesNow?.();
         renderStats();
         renderResults();
       });
     } });
+  });
+
+  // Export complet
+  document.getElementById('btn-export-all-fiches-excel')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=fiches_client&format=xlsx';
+  });
+  document.getElementById('btn-export-all-fiches-csv')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=fiches_client&format=csv';
   });
 
   // Toggle mode sélection
@@ -288,10 +305,13 @@ function renderBulkBar() {
   });
 
   const exportSelected = (format) => {
+    const ids = Array.from(selectedFicheIds);
     const selected = getFichesClient(currentFilters).filter((f) => selectedFicheIds.has(String(f.id)));
     exportRecords({
-      filename: `fiches_client_immolode_${new Date().toISOString().slice(0, 10)}`,
+      filename: `fiches_client_selection_${new Date().toISOString().slice(0, 10)}`,
       format,
+      model: 'fiches_client',
+      ids,
       rows: selected,
       columns: [
         { label: 'Référence', key: 'reference' },

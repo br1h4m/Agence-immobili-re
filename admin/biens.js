@@ -47,6 +47,14 @@ async function init() {
           ${adminIcon('upload', { size: 14 })}
           <span>Importer CSV / Excel</span>
         </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-excel" title="Exporter le catalogue complet en Excel (.xlsx)">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export Excel</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-export-all-csv" title="Exporter le catalogue complet en CSV">
+          ${adminIcon('download', { size: 14 })}
+          <span>Export CSV</span>
+        </button>
         <button type="button" class="btn ${isSelectMode ? 'btn-primary' : 'btn-outline'} btn-sm" id="btn-toggle-select-mode">
           ${adminIcon('check', { size: 14 })}
           <span>${isSelectMode ? 'Annuler la sélection' : 'Sélectionner'}</span>
@@ -112,6 +120,14 @@ async function init() {
     openCsvImportModal({ model: 'biens', title: 'Importer des biens', onImportSuccess: () => {
       syncWithBackend().then(() => renderResults());
     } });
+  });
+
+  // Export complet
+  document.getElementById('btn-export-all-excel')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=properties&format=xlsx';
+  });
+  document.getElementById('btn-export-all-csv')?.addEventListener('click', () => {
+    window.location.href = '/api/export.php?model=properties&format=csv';
   });
 
   // Bouton mode sélection
@@ -233,10 +249,13 @@ function renderBulkBar() {
   });
 
   const exportSelected = (format) => {
+    const ids = Array.from(selectedPropertyIds);
     const selected = getProperties(currentFilters).filter((p) => selectedPropertyIds.has(String(p.id)));
     exportRecords({
-      filename: `biens_immolode_${new Date().toISOString().slice(0, 10)}`,
+      filename: `biens_selection_${new Date().toISOString().slice(0, 10)}`,
       format,
+      model: 'properties',
+      ids,
       rows: selected,
       columns: [
         { label: 'Référence', key: 'reference' },

@@ -8,6 +8,25 @@
 declare(strict_types=1);
 
 $year = date('Y');
+
+// Récupération automatique des coordonnées réelles depuis la base de données
+if (isset($conn) && $conn instanceof mysqli) {
+    $param_res = $conn->query("SELECT `cle`, `valeur` FROM `parametres` WHERE `cle` IN ('address', 'agence_adresse', 'agence_telephone', 'phone', 'email')");
+    if ($param_res) {
+        while ($p = $param_res->fetch_assoc()) {
+            if (($p['cle'] === 'address' || $p['cle'] === 'agence_adresse') && !empty($p['valeur']) && !isset($agency_address)) {
+                $agency_address = $p['valeur'];
+            }
+            if (($p['cle'] === 'agence_telephone' || $p['cle'] === 'phone') && !empty($p['valeur']) && !isset($agency_tel)) {
+                $agency_tel = $p['valeur'];
+            }
+            if ($p['cle'] === 'email' && !empty($p['valeur']) && !isset($agency_email)) {
+                $agency_email = $p['valeur'];
+            }
+        }
+    }
+}
+
 $agency_tel = $agency_tel ?? '+213 555 12 34 56';
 $agency_email = $agency_email ?? 'contact@immolode.dz';
 $agency_address = $agency_address ?? '12 rue Didouche Mourad, Béjaïa 06000, Algérie';

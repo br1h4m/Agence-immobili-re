@@ -93,63 +93,134 @@
   --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.7);
 }
 
-/* --- Dark theme : champs de formulaire --- */
+/* --- Dark theme : champs de formulaire et saisie --- */
 [data-theme="dark"] input,
 [data-theme="dark"] textarea,
-[data-theme="dark"] select {
-  background-color: #1e2134;
-  color: #e8eaf6;
-  border-color: #3a3f6b;
-}
-
-[data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder {
-  color: #6b7099;
-}
-
-[data-theme="dark"] option {
-  background-color: #1e2134;
-  color: #e8eaf6;
-}
-
-/* --- Dark theme : tableaux --- */
-[data-theme="dark"] .admin-table th {
-  background-color: #242740;
-  color: #9095b0;
-}
-
-[data-theme="dark"] .admin-table td {
-  color: #c8cae8;
-  border-color: #2e3250;
-}
-
-[data-theme="dark"] .admin-table tr:hover td {
-  background-color: #1e2134;
-}
-
-/* --- Dark theme : modales / drawers --- */
-[data-theme="dark"] .admin-modal,
-[data-theme="dark"] .admin-drawer {
-  background-color: #1a1d2e;
-  border-color: #2e3250;
-}
-
-[data-theme="dark"] .confirm-dialog,
-[data-theme="dark"] .swal2-popup,
-[data-theme="dark"] [role="dialog"] {
+[data-theme="dark"] select,
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-textarea,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .search-input-wrap input {
   background-color: #1a1d2e !important;
   color: #e8eaf6 !important;
   border-color: #2e3250 !important;
 }
 
-/* --- Dark theme : boutons --- */
-[data-theme="dark"] .btn-outline {
-  border-color: #3a3f6b;
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-textarea:focus,
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] .search-input-wrap input:focus {
+  background-color: #242740 !important;
+  color: #ffffff !important;
+  border-color: #C5A880 !important;
+  box-shadow: 0 0 0 3px rgba(197, 168, 128, 0.25) !important;
+  outline: none !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] .form-input::placeholder,
+[data-theme="dark"] .form-textarea::placeholder,
+[data-theme="dark"] .search-input-wrap input::placeholder {
+  color: #7b81a8 !important;
+  opacity: 1;
+}
+
+[data-theme="dark"] option {
+  background-color: #1a1d2e;
   color: #e8eaf6;
+}
+
+[data-theme="dark"] select option:checked {
+  background-color: #242740;
+  color: #C5A880;
+}
+
+/* --- Dark theme : tableaux et sélection --- */
+[data-theme="dark"] .admin-table {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .admin-table th {
+  background-color: #161826;
+  color: #9da3c7;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .admin-table td {
+  color: #d4d7ed;
+  border-color: #252840;
+}
+
+[data-theme="dark"] .admin-table tr:hover td {
+  background-color: #20243a !important;
+}
+
+[data-theme="dark"] .admin-table tr.is-selected td {
+  background-color: rgba(197, 168, 128, 0.18) !important;
+}
+
+/* --- Dark theme : modales / drawers / overlays --- */
+[data-theme="dark"] .admin-modal,
+[data-theme="dark"] .admin-modal-card,
+[data-theme="dark"] .admin-drawer {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+  color: #e8eaf6;
+}
+
+[data-theme="dark"] .admin-drawer-head,
+[data-theme="dark"] .admin-drawer-footer,
+[data-theme="dark"] .admin-modal-head,
+[data-theme="dark"] .admin-modal-actions {
+  background-color: #161826;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .confirm-dialog,
+[data-theme="dark"] .swal2-popup,
+[data-theme="dark"] [role="dialog"],
+[data-theme="dark"] .admin-toast {
+  background-color: #1a1d2e !important;
+  color: #e8eaf6 !important;
+  border: 1px solid #2e3250 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* --- Dark theme : boutons & interactions --- */
+[data-theme="dark"] .btn-outline {
+  background-color: transparent;
+  border-color: #3d436a;
+  color: #d4d7ed;
 }
 
 [data-theme="dark"] .btn-outline:hover {
   background-color: #242740;
+  border-color: #C5A880;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-ghost {
+  color: #d4d7ed;
+}
+
+[data-theme="dark"] .btn-ghost:hover {
+  background-color: #242740;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-icon {
+  color: #9da3c7;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .btn-icon:hover {
+  background-color: #242740;
+  color: #ffffff;
 }
 
 /* --- Dark theme : topbar & sidebar --- */
@@ -163,50 +234,135 @@
   border-color: #2e3250;
 }
 
+[data-theme="dark"] .sidebar-link {
+  color: #9da3c7;
+}
+
 [data-theme="dark"] .sidebar-link:hover,
 [data-theme="dark"] .sidebar-link.is-active {
   background-color: #242740;
+  color: #C5A880;
 }
 
-/* --- Dark theme : labels et cartes --- */
+/* --- Dark theme : labels, cartes & conteneurs --- */
 [data-theme="dark"] .form-field label,
 [data-theme="dark"] .form-label {
-  color: #9095b0;
+  color: #9da3c7;
 }
 
-[data-theme="dark"] .admin-card {
-  background-color: #1a1d2e;
+[data-theme="dark"] .card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .admin-card,
+[data-theme="dark"] .filters-bar {
+  background-color: #1a1d2e !important;
+  border-color: #2e3250 !important;
+}
+
+[data-theme="dark"] .card-header {
   border-color: #2e3250;
 }
 
-/* --- Dark theme : dropdowns --- */
-[data-theme="dark"] .dropdown-menu {
-  background-color: #1a1d2e;
-  border-color: #2e3250;
+[data-theme="dark"] .card-title,
+[data-theme="dark"] .stat-value {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .card-subtitle,
+[data-theme="dark"] .stat-label {
+  color: #9da3c7;
+}
+
+/* --- Dark theme : dropdowns & menus --- */
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .topbar-dropdown {
+  background-color: #1a1d2e !important;
+  border-color: #2e3250 !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: #d4d7ed;
 }
 
 [data-theme="dark"] .dropdown-item:hover {
-  background-color: #242740;
+  background-color: #242740 !important;
+  color: #ffffff;
 }
 
-/* --- Dark theme : badges --- */
+[data-theme="dark"] .dropdown-divider {
+  border-color: #2e3250;
+}
+
+/* --- Dark theme : badges & compteurs --- */
 [data-theme="dark"] .badge {
   border-color: #2e3250;
 }
 
-/* --- Dark theme : flatpickr --- */
+[data-theme="dark"] .badge--sale {
+  background-color: #172554;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .badge--rent {
+  background-color: #3b0764;
+  color: #d8b4fe;
+}
+
+[data-theme="dark"] .badge--muted,
+[data-theme="dark"] .badge--neutral {
+  background-color: #242740;
+  color: #9da3c7;
+}
+
+/* --- Dark theme : calendrier Flatpickr --- */
 [data-theme="dark"] .flatpickr-calendar {
-  background-color: #1a1d2e;
-  border-color: #2e3250;
-  color: #e8eaf6;
+  background-color: #1a1d2e !important;
+  border-color: #2e3250 !important;
+  color: #e8eaf6 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .flatpickr-months,
+[data-theme="dark"] .flatpickr-weekdays {
+  background-color: #161826 !important;
 }
 
 [data-theme="dark"] .flatpickr-day {
-  color: #c8cae8;
+  color: #d4d7ed !important;
 }
 
 [data-theme="dark"] .flatpickr-day:hover {
+  background-color: #242740 !important;
+}
+
+[data-theme="dark"] .flatpickr-day.selected {
+  background-color: #C5A880 !important;
+  color: #1a1a1a !important;
+}
+
+/* --- Dark theme : téléversement & inspection fichiers --- */
+[data-theme="dark"] .image-preview-card {
   background-color: #242740;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .doc-inspect-card {
+  background-color: #161826;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .doc-inspect-preview {
+  background-color: #1a1d2e;
+  border-color: #2e3250;
+}
+
+[data-theme="dark"] .admin-lightbox-img {
+  background: #1a1d2e;
+}
+
+[data-theme="dark"] .form-checkbox-group {
+  background-color: #161826;
+  border-color: #2e3250;
 }
 
 *, *::before, *::after {
@@ -981,8 +1137,9 @@ button, input, select, textarea {
   transition: all var(--transition-fast);
 }
 .search-input-wrap input:focus {
-  background-color: #FFF;
+  background-color: var(--admin-surface);
   border-color: var(--admin-gold);
+  color: var(--admin-text);
   outline: none;
   box-shadow: 0 0 0 3px rgba(181, 154, 106, 0.15);
 }
@@ -999,13 +1156,15 @@ button, input, select, textarea {
   border: 1px solid var(--admin-border);
   border-radius: var(--radius-sm);
   background-color: var(--admin-surface-alt);
+  color: var(--admin-text);
   font-size: 0.88rem;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 .form-select:focus {
-  background-color: #FFF;
+  background-color: var(--admin-surface);
   border-color: var(--admin-gold);
+  color: var(--admin-text);
   outline: none;
 }
 
@@ -1066,12 +1225,15 @@ button, input, select, textarea {
   padding: 10px 14px;
   border: 1px solid var(--admin-border);
   border-radius: var(--radius-sm);
-  background-color: #FFFFFF;
+  background-color: var(--admin-surface);
+  color: var(--admin-text);
   font-size: 0.9rem;
   transition: all var(--transition-fast);
 }
 .form-input:focus, .form-textarea:focus {
+  background-color: var(--admin-surface);
   border-color: var(--admin-gold);
+  color: var(--admin-text);
   outline: none;
   box-shadow: 0 0 0 3px rgba(181, 154, 106, 0.15);
 }
@@ -1830,6 +1992,24 @@ body.sidebar-collapsed .admin-main-wrap { margin-left: 68px !important; }
   outline: none;
 }
 
-/* Admin table checkbox size */
-.admin-table input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--admin-gold); }
+/* Admin table checkboxes & sélection multiple ergonomique */
+.admin-table input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--admin-gold);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.admin-table tbody tr.is-selected {
+  background-color: rgba(181, 154, 106, 0.12) !important;
+}
+
+[data-theme="dark"] .admin-table tbody tr.is-selected {
+  background-color: rgba(197, 168, 128, 0.22) !important;
+}
 
