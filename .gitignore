@@ -1,0 +1,30 @@
+# Dépendances & cache
+/vendor/
+*.log
+*.cache
+
+# Configuration locale (ne jamais versionner les credentials)
+/config/local.php
+.env
+
+# Uploads (ne pas versionner les fichiers uploadés par les utilisateurs)
+/uploads/properties/*.jpg
+/uploads/properties/*.jpeg
+/uploads/properties/*.png
+/uploads/properties/*.webp
+/uploads/properties/*.gif
+/uploads/avatars/*.jpg
+/uploads/avatars/*.jpeg
+/uploads/avatars/*.png
+/uploads/avatars/*.webp
+/uploads/cms/*.jpg
+/uploads/cms/*.jpeg
+/uploads/cms/*.png
+/uploads/cms/*.webp
+/uploads/cms/*.gif
+
+# Système
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

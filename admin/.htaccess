@@ -1,0 +1,8 @@
+RewriteEngine On
+RewriteBase /immolode-php/admin/
+
+# URLs propres PHP : /immolode-php/admin/biens -> /immolode-php/admin/biens.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L,QSA]
