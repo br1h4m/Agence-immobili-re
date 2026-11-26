@@ -133,7 +133,7 @@ if ($property) {
   </noscript>
 
   <link rel="stylesheet" href="/assets/css/style.css">
-  <link rel="stylesheet" href="/assets/css/component.css">
+  <link rel="stylesheet" href="/assets/css/component.css?v=20261126">
   <link rel="stylesheet" href="/assets/css/responsive.css">
 
   <!-- Leaflet Carte Interactive (OpenStreetMap) -->
